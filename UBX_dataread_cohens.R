@@ -93,6 +93,8 @@ if(length(inds2read)>0){
     scores_4_keep = c()
     scores_5_keep = c()
 
+    all_comparison_results_reps = data.frame()
+    
     for (rep in min_reps:max_reps){  
       
       #### PATHOGENIC INJURY
@@ -137,45 +139,28 @@ if(length(inds2read)>0){
         scores_4_keep = c(scores_4_keep, scores_4)
         scores_5_keep = c(scores_5_keep, scores_5)
         
-        # --- Comparisons ---
-        # Pathogenic, Treg ON → OFF (1 → 0)
-        mean_diff_10   = mean(scores_1) - mean(scores_0)
-        # Pathogenic, Treg RANDOM → NOT RANDOM (2 → 1)
-        mean_diff_21   = mean(scores_2) - mean(scores_1)
-        # Sterile, Treg ON → OFF (4 → 3)
-        mean_diff_43   = mean(scores_4) - mean(scores_3)
-        # Sterile, Treg RANDOM → NOT RANDOM (5 → 4)
-        mean_diff_54   = mean(scores_5) - mean(scores_4)
-
         # --- Tabulate all comparisons ---
         comparison_results = data.frame(
           param_set_id = i,
           replicate_id = rep,
-          comparison = c(
-            "Treg_ON_OFF",
-            "Treg_RND_NRND",
-            "Treg_ON_OFF",
-            "Treg_RND_NRND"
-          ),
-          injury_type = c("pathogenic", "pathogenic", "sterile", "sterile"),
-          ss_start_0 = rep(time_ss_0, 4),
-          ss_start_1 = rep(time_ss_1, 4),
-          ss_start_2 = rep(time_ss_2, 4),
-          ss_start_3 = rep(time_ss_3, 4),
-          ss_start_4 = rep(time_ss_4, 4),
-          ss_start_5 = rep(time_ss_5, 4),
-          mean_diff = c(mean_diff_10, mean_diff_21, mean_diff_43, mean_diff_54)
+          injury_type  = c("pathogenic","pathogenic","pathogenic","sterile","sterile","sterile"),
+          tregs_on     = c(0, 1, 1, 0, 1, 1),
+          tregs_rnd    = c(0, 0, 1, 0, 0, 1),
+          ss_start     = c(time_ss_0, time_ss_1, time_ss_3, time_ss_3, time_ss_4, time_ss_5),
+          mean_score   = c(mean(scores_0), mean(scores_1), mean(scores_2), mean(scores_3), mean(scores_4), mean(scores_5))
         )
         
         # Append to global results
-        all_comparison_results = bind_rows(all_comparison_results, comparison_results)
+        all_comparison_results_reps = bind_rows(all_comparison_results_reps, comparison_results)
       }
     }
     
-    all_comparison_results$d_10 = cohens_d(scores_1_keep, scores_0_keep)
-    all_comparison_results$d_21 = cohens_d(scores_2_keep, scores_1_keep)
-    all_comparison_results$d_43 = cohens_d(scores_4_keep, scores_3_keep)
-    all_comparison_results$d_54 = cohens_d(scores_5_keep, scores_4_keep) 
+    all_comparison_results_reps$d_10 = cohens_d(scores_1_keep, scores_0_keep)
+    all_comparison_results_reps$d_21 = cohens_d(scores_2_keep, scores_1_keep)
+    all_comparison_results_reps$d_43 = cohens_d(scores_4_keep, scores_3_keep)
+    all_comparison_results_reps$d_54 = cohens_d(scores_5_keep, scores_4_keep) 
+    
+    all_comparison_results = bind_rows(all_comparison_results, all_comparison_results_reps)
     
   }
   message("num of param_id successfully added: ", length(inds2read))
