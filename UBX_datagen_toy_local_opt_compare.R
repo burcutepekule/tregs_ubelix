@@ -1,24 +1,25 @@
 rm(list=ls())
 library(dplyr)
 library(tidyr)
+library(patchwork)
+
 # ============================================================================
 # LOAD FUNCTIONS
 # ============================================================================
 
-source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
+source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/FAST_FUNCTIONS.R")
+source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/PLOT_FUNCTIONS.R")
 
 split_equal = function(x, n_chunks) {
   split(x, cut(seq_along(x), breaks = n_chunks, labels = FALSE))
 }
-args   = commandArgs(trailingOnly = TRUE)
-n1     = as.integer(args[1])
-n2     = as.integer(args[2])
+n1     = 10
+n2     = 1
 
-chunks    = split_equal(0:99999, n1)
+chunks    = split_equal(0:99,n1)
 loop_over = chunks[[n2]]
 
-dir_name_data = '/storage/homefs/bt25p365/tregs/mass_sim_results_R'
+dir_name_data = '/Users/burcutepekule/Dropbox/tregs_ubelix/mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','epithelial_inj_3','epithelial_inj_4','epithelial_inj_5',
@@ -29,13 +30,13 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
 # ============================================================================
 # READ PARAMETERS FROM CSV
 # ============================================================================
-params_df = read.csv("/storage/homefs/bt25p365/tregs/lhs_parameters_ubelix.csv", stringsAsFactors = FALSE)
+params_df = read.csv("/Users/burcutepekule/Dropbox/tregs_ubelix/lhs_parameters_local.csv", stringsAsFactors = FALSE)
 params_df = params_df %>% dplyr::filter(param_set_id %in% loop_over)
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
-t_max      = 5000
-num_reps   = 100 # reps per parameter set
+t_max      = 100
+num_reps   = 1 # reps per parameter set
 plot_on    = 0
 if(plot_on==1){
   dir_name_frames = './frames'
@@ -66,14 +67,14 @@ act_radius_SAMPs = 1
 # Logistic function parameters (for epithelial injury calculation)
 k_in  = 0.044
 x0_in = 50
-
-inds_read_filename = paste0('/storage/homefs/bt25p365/tregs/read_ids.rds')
-if(file.exists(inds_read_filename)){
-  inds_read = readRDS(inds_read_filename)
-}else{
-  inds_read = c()
-}
-loop_over = setdiff(loop_over, inds_read)
+# 
+# inds_read_filename = paste0('/storage/homefs/bt25p365/tregs/read_ids.rds')
+# if(file.exists(inds_read_filename)){
+#   inds_read = readRDS(inds_read_filename)
+# }else{
+#   inds_read = c()
+# }
+# loop_over = setdiff(loop_over, inds_read)
 
 scenarios_df = expand.grid(
   sterile         = c(0, 1),
@@ -86,27 +87,65 @@ scenarios_df = scenarios_df %>% dplyr::filter(!(allow_tregs == 0 & randomize_tre
 for(param_set_id_use in loop_over){
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
   
-  source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS.R")
-  
   for (scenario_ind in 1:nrow(scenarios_df)){
+    
     sterile         = scenarios_df[scenario_ind,]$sterile
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
+    
+    source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/ASSIGN_PARAMETERS.R")
     
     print(paste0('Processing param set ',param_set_id_use,' 😱 for scenario ', scenario_ind))
     
     longitudinal_df_keep = c()
     
-    # source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS.R")
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_OPTIMIZED.R")
-    
+    source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/RUN_REPS.R")
     colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
     saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
                                          '_sterile_',sterile,
                                          '_tregs_',allow_tregs,
                                          '_trnd_',randomize_tregs,'.rds'))
     
-    print(paste0('Data for param set id ',param_set_id_use,' and scenario ', scenario_ind ,' saved 🥳.'))
+    longitudinal_df_keep_not_opt = longitudinal_df_keep
+    
+    longitudinal_df_keep = c()
+    source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/RUN_REPS_OPTIMIZED.R")
+    colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
+    saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
+                                         '_sterile_',sterile,
+                                         '_tregs_',allow_tregs,
+                                         '_trnd_',randomize_tregs,'_opt.rds'))
+    
+    print(paste0('Data for param set id ',param_set_id_use,' and scenario ', scenario_ind ,' OPT saved 🥳.'))
+    
+    variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
+    data_long = longitudinal_df_keep_not_opt %>%
+      dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%
+      pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
+    
+    p_N_opt=ggplot(data_long, aes(x = t, y = value, color = variable)) +
+      geom_line(alpha = 1, linewidth = 1) +
+      facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
+      scale_color_manual(values = agent_colors) +
+      theme_minimal() +
+      labs(title = "Epithelial Cell Dynamics: NOT OPTIMIZED", x = "Time", y = "Count", color = "Agent")
+    
+    variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
+    data_long = longitudinal_df_keep %>%
+      dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%
+      pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
+    
+    p_opt=ggplot(data_long, aes(x = t, y = value, color = variable)) +
+      geom_line(alpha = 1, linewidth = 1) +
+      facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
+      scale_color_manual(values = agent_colors) +
+      theme_minimal() +
+      labs(title = "Epithelial Cell Dynamics: OPTIMIZED", x = "Time", y = "Count", color = "Agent")
+
+    dev.off()
+    print(p_N_opt / p_opt)
+    
+    browser()
   }
 }
 

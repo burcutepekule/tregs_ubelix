@@ -97,7 +97,8 @@ for(param_set_id_use in loop_over){
     
     longitudinal_df_keep = c()
     
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS.R")
+    # source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS.R")
+    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_OPTIMIZED.R")
     
     colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
     saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
