@@ -19,7 +19,7 @@ n2     = 1
 chunks    = split_equal(0:99,n1)
 loop_over = chunks[[n2]]
 
-dir_name_data = '/Users/burcutepekule/Dropbox/tregs_ubelix/mass_sim_results_R'
+dir_name_data = '/Users/burcutepekule/Dropbox/tregs_ubelix/mass_sim_results_R_local'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','epithelial_inj_3','epithelial_inj_4','epithelial_inj_5',
