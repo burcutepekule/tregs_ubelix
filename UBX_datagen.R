@@ -86,18 +86,19 @@ scenarios_df = scenarios_df %>% dplyr::filter(!(allow_tregs == 0 & randomize_tre
 for(param_set_id_use in loop_over){
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
   
-  source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS.R")
-  
   for (scenario_ind in 1:nrow(scenarios_df)){
     sterile         = scenarios_df[scenario_ind,]$sterile
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
     
+    source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS.R")
+    
     print(paste0('Processing param set ',param_set_id_use,' 😱 for scenario ', scenario_ind))
     
     longitudinal_df_keep = c()
     
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS.R")
+    # source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS.R")
+    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_OPTIMIZED.R")
     
     colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
     saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
