@@ -16,31 +16,63 @@ sterile_comparison_keep    = c()
 pathogenic_comparison_keep = c()
 
 
-path      = "/Users/burcutepekule/Desktop/tregs/mass_sim_results_R/"
-files_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_trnd_0_tregs_0.rds$", full.names = TRUE)
-files_1   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_trnd_0_tregs_1.rds$", full.names = TRUE)
-indices_0 = str_extract(basename(files_0), "\\d+") |> as.numeric()
-indices_1 = str_extract(basename(files_1), "\\d+") |> as.numeric()
-indices   = intersect(indices_0, indices_1)
+path      = "/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/"
+files_0_0_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_0_tregs_0_trnd_0.rds$", full.names = TRUE)
+files_0_1_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_0_tregs_1_trnd_0.rds$", full.names = TRUE)
+files_0_1_1   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_0_tregs_1_trnd_1.rds$", full.names = TRUE)
+files_1_0_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_tregs_0_trnd_0.rds$", full.names = TRUE)
+files_1_1_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_tregs_1_trnd_0.rds$", full.names = TRUE)
+files_1_1_1   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_tregs_1_trnd_1.rds$", full.names = TRUE)
+
+
+indices_0_0_0 = str_extract(basename(files_0_0_0), "\\d+") |> as.numeric()
+indices_0_1_0 = str_extract(basename(files_0_1_0), "\\d+") |> as.numeric()
+indices_0_1_1 = str_extract(basename(files_0_1_1), "\\d+") |> as.numeric()
+indices_1_0_0 = str_extract(basename(files_1_0_0), "\\d+") |> as.numeric()
+indices_1_1_0 = str_extract(basename(files_1_1_0), "\\d+") |> as.numeric()
+indices_1_1_1 = str_extract(basename(files_1_1_1), "\\d+") |> as.numeric()
+
+indices = Reduce(intersect, list(
+  indices_0_0_0,
+  indices_0_1_0,
+  indices_0_1_1,
+  indices_1_0_0,
+  indices_1_1_0,
+  indices_1_1_1
+))
 
 # Initialize an empty results dataframe before the loop
 all_comparison_results = data.frame()
 
-if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')){
-  inds_read = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')
+if(file.exists('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')){
+  inds_read = readRDS('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')
 }else{
   inds_read = c()
 }
 
-inds2read = setdiff(indices,inds_read)
+inds2read = sort(setdiff(indices,inds_read))
+length(inds2read)
 
 if(length(inds2read)>0){
   for (i in inds2read){
     message("Processing param_set_", i)
-    results_0    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_0.rds'))
-    results_1    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_1.rds'))
-    results      = rbind(results_0, results_1)
-
+    results_0_0_0 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_0_tregs_0_trnd_0.rds'))
+    results_0_1_0 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_0_tregs_1_trnd_0.rds'))
+    results_0_1_1 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_0_tregs_1_trnd_1.rds'))
+    
+    results_1_0_0 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_1_tregs_0_trnd_0.rds'))
+    results_1_1_0 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_1_tregs_1_trnd_0.rds'))
+    results_1_1_1 = readRDS(paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_1_tregs_1_trnd_1.rds'))
+    
+    results = rbind(
+      results_0_0_0,
+      results_0_1_0,
+      results_0_1_1,
+      results_1_0_0,
+      results_1_1_0,
+      results_1_1_1
+    )
+    
     # Merge
     results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
                                           5*epithelial_inj_1+
@@ -56,42 +88,77 @@ if(length(inds2read)>0){
     
     for (rep in min_reps:max_reps){  
       
+      #### PATHOGENIC INJURY
+      # tregs OFF
+      full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==0 & tregs_on==0 & randomize_tregs==0)
+      # tregs ON
+      full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==0 & tregs_on==1 & randomize_tregs==0)
+      # tregs ON, BUT ARE random
+      full_data_comparison_scores_2 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==0 & tregs_on==1 & randomize_tregs==1)
+      
       #### STERILE INJURY
       # tregs OFF
-      full_data_comparison_scores_tregs_off = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
+      full_data_comparison_scores_3 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on==0 & randomize_tregs==0)
       # tregs ON
-      full_data_comparison_scores_tregs_on  = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-
+      full_data_comparison_scores_4 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on==1 & randomize_tregs==0)
+      # tregs ON, BUT ARE random
+      full_data_comparison_scores_5 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on==1 & randomize_tregs==1)
+      
       # --- Steady-state detection ---
-      time_ss_tregs_off = steady_state_idx(full_data_comparison_scores_tregs_off$epithelial_score)
-      time_ss_tregs_on  = steady_state_idx(full_data_comparison_scores_tregs_on$epithelial_score)
-      time_ss_vec = c(time_ss_tregs_off, time_ss_tregs_on)
+      time_ss_0 = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
+      time_ss_1 = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
+      time_ss_2 = steady_state_idx(full_data_comparison_scores_2$epithelial_score)
+      time_ss_3 = steady_state_idx(full_data_comparison_scores_3$epithelial_score)
+      time_ss_4 = steady_state_idx(full_data_comparison_scores_4$epithelial_score)
+      time_ss_5 = steady_state_idx(full_data_comparison_scores_5$epithelial_score)
+      
+      time_ss_vec = c(time_ss_0, time_ss_1, time_ss_2, time_ss_3, time_ss_4, time_ss_5)
       
       if(!any(is.na(time_ss_vec))){
-        # --- Comparisons --- without matching over steady state
-        ## Treg OFF → ON 
-        scores_tregs_off = full_data_comparison_scores_tregs_off$epithelial_score[time_ss_tregs_off:t_max_ind]
-        scores_tregs_on  = full_data_comparison_scores_tregs_on$epithelial_score[time_ss_tregs_on:t_max_ind]
         
-        cohens_d_on_off    = cohens_d(scores_tregs_off, scores_tregs_on)
-        mean_on            = mean(scores_tregs_on)
-        mean_off           = mean(scores_tregs_off)
-        mean_diff_on_off   = mean_on - mean_off
+        scores_0 = full_data_comparison_scores_0$epithelial_score[time_ss_0:t_max_ind]
+        scores_1 = full_data_comparison_scores_1$epithelial_score[time_ss_1:t_max_ind]
+        scores_2 = full_data_comparison_scores_2$epithelial_score[time_ss_2:t_max_ind]
+        scores_3 = full_data_comparison_scores_0$epithelial_score[time_ss_3:t_max_ind]
+        scores_4 = full_data_comparison_scores_1$epithelial_score[time_ss_4:t_max_ind]
+        scores_5 = full_data_comparison_scores_2$epithelial_score[time_ss_5:t_max_ind]
+        
+        # --- Comparisons ---
+        # Pathogenic, Treg ON → OFF (1 → 0)
+        mean_diff_10   = mean(scores_1) - mean(scores_0)
+        d_10           = cohens_d(scores_1, scores_0)
+        
+        # Pathogenic, Treg RANDOM → NOT RANDOM (2 → 1)
+        mean_diff_21   = mean(scores_2) - mean(scores_1)
+        d_21           = cohens_d(scores_2, scores_1)
+        
+        # Sterile, Treg ON → OFF (4 → 3)
+        mean_diff_43   = mean(scores_4) - mean(scores_3)
+        d_43           = cohens_d(scores_4, scores_3)
+        
+        # Sterile, Treg RANDOM → NOT RANDOM (5 → 4)
+        mean_diff_54   = mean(scores_5) - mean(scores_4)
+        d_54           = cohens_d(scores_5, scores_4)
         
         # --- Tabulate all comparisons ---
         comparison_results = data.frame(
           param_set_id = i,
           replicate_id = rep,
           comparison = c(
-            "Treg_OFF_ON"
+            "Treg_ON_OFF",
+            "Treg_RND_NRND",
+            "Treg_ON_OFF",
+            "Treg_RND_NRND"
           ),
-          injury_type = c("sterile"),
-          ss_start_tregs_off = c(time_ss_tregs_off),
-          ss_start_tregs_on  = c(time_ss_tregs_on),
-          mean_treg_on       = c(mean_on),
-          mean_treg_off      = c(mean_off),
-          mean_diff_on_off   = c(mean_diff_on_off),
-          cohens_d           = c(cohens_d_on_off)
+          injury_type = c("pathogenic", "pathogenic", "sterile", "sterile"),
+          ss_start_0 = rep(time_ss_0, 4),
+          ss_start_1 = rep(time_ss_1, 4),
+          ss_start_2 = rep(time_ss_2, 4),
+          ss_start_3 = rep(time_ss_3, 4),
+          ss_start_4 = rep(time_ss_4, 4),
+          ss_start_5 = rep(time_ss_5, 4),
+          cohens_d = c(d_10, d_21, d_43, d_54),
+          mean_diff = c(mean_diff_10, mean_diff_21, mean_diff_43, mean_diff_54)
         )
         
         # Append to global results
@@ -102,21 +169,21 @@ if(length(inds2read)>0){
   message("num of param_id successfully added: ", length(inds2read))
   
   #---- read previous file
-  if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')){
-    saveRDS(inds2read, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')
+  if(!file.exists('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')){
+    saveRDS(inds2read, '/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')
   }else{
-    inds2read_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')
+    inds2read_old = readRDS('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')
     inds2read     = c(inds2read_old, inds2read)
-    saveRDS(inds2read, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_read_id_sterile_1_trnd_0.rds')
+    saveRDS(inds2read, '/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/ids_read.rds')
   }
   
   #---- read previous file
-  if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_sterile_1_trnd_0.rds')){
-    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_sterile_1_trnd_0.rds')
+  if(!file.exists('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/data_cpp_read.rds')){
+    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/data_cpp_read.rds')
   }else{
-    all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_sterile_1_trnd_0.rds')
+    all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/data_cpp_read.rds')
     all_comparison_results     = rbind(all_comparison_results_old, all_comparison_results)
-    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_A15_sterile_1_trnd_0.rds')
+    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/data_cpp_read.rds')
   }
 }else{
   message("No new pts added.")
