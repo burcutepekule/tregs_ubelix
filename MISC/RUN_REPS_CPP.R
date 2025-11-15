@@ -718,6 +718,8 @@ for (reps_in in 0:num_reps){
     microbes_cumdeath_longitudinal
   )
 
+  colnames(longitudinal_df) = colnames_insert
+  
   longitudinal_df$t = 1:t_max
   longitudinal_df$sterile = sterile
   longitudinal_df$tregs_on = allow_tregs
@@ -725,8 +727,28 @@ for (reps_in in 0:num_reps){
   longitudinal_df$param_set_id = param_set_use$param_set_id
   longitudinal_df$rep_id = reps_in
 
+  
+  longitudinal_df = longitudinal_df %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
+                                                                       5*epithelial_inj_1+
+                                                                       4*epithelial_inj_2+
+                                                                       3*epithelial_inj_3+
+                                                                       2*epithelial_inj_4+
+                                                                       1*epithelial_inj_5)
+  
+  longitudinal_df$time_ss = steady_state_idx(longitudinal_df$epithelial_score)
+  
+  
+  
   longitudinal_df = longitudinal_df %>%
-    select(t, sterile, tregs_on,
-           randomize_tregs, param_set_id, rep_id, everything())
+    select(t, 
+           sterile, 
+           tregs_on,
+           randomize_tregs, 
+           param_set_id, 
+           rep_id, 
+           epithelial_score, 
+           time_ss,
+           everything())
+  
   longitudinal_df_keep = rbind(longitudinal_df_keep, longitudinal_df)
 }
