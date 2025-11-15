@@ -20,8 +20,8 @@ cat("\n\n")
 # ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
-source("MISC/FAST_FUNCTIONS_CPP.R")
-source("MISC/PLOT_FUNCTIONS.R")
+source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
+source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
 
 cat("\n")
 
@@ -69,7 +69,7 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
 # ============================================================================
 
 cat("Reading parameters...\n")
-params_df = read.csv("lhs_parameters_ubelix.csv", stringsAsFactors = FALSE)
+params_df = read.csv("/storage/homefs/bt25p365/tregs/lhs_parameters_ubelix.csv", stringsAsFactors = FALSE)
 params_df = params_df %>% dplyr::filter(param_set_id %in% loop_over)
 cat("Loaded", nrow(params_df), "parameter sets\n\n")
 
@@ -156,18 +156,16 @@ cat("\n\n")
 # MAIN SIMULATION LOOP
 # ============================================================================
 
-start_time_total = Sys.time()
-
 for(param_set_id_use in loop_over){
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
-
-  source("MISC/ASSIGN_PARAMETERS.R")
 
   for (scenario_ind in 1:nrow(scenarios_df)){
     sterile         = scenarios_df[scenario_ind,]$sterile
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
-
+    
+    source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS.R")
+    
     cat(paste0('[', Sys.time(), '] Processing param set ', param_set_id_use,
                ' - scenario ', scenario_ind, '/', nrow(scenarios_df)))
 
@@ -179,7 +177,7 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION
     # ========================================================================
-    source("MISC/RUN_REPS_CPP.R")
+    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_CPP.R")
 
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
@@ -197,21 +195,12 @@ for(param_set_id_use in loop_over){
 # ============================================================================
 # SUMMARY
 # ============================================================================
-
-end_time_total = Sys.time()
-total_elapsed = as.numeric(difftime(end_time_total, start_time_total, units = "secs"))
-
 cat("\n")
 cat("=" = rep("=", 70), sep = "")
 cat("\n")
 cat("SIMULATION COMPLETE\n")
 cat("=" = rep("=", 70), sep = "")
 cat("\n")
-cat("Total time:", sprintf("%.1f seconds (%.1f minutes)\n", total_elapsed, total_elapsed/60))
 cat("Data saved to:", dir_name_data, "\n")
 cat("\n")
 
-cat("🚀 C++ acceleration enabled!\n")
-cat("   Expected speedup: 20-100x faster than pure R\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n\n")
