@@ -20,8 +20,8 @@ cat("\n\n")
 # ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
-source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
+source("./MISC/FAST_FUNCTIONS.R")
+source("./MISC/PLOT_FUNCTIONS.R")
 
 cat("\n")
 
@@ -40,11 +40,10 @@ split_equal = function(x, n_chunks) {
 # COMMAND LINE ARGUMENTS
 # ============================================================================
 
-args   = commandArgs(trailingOnly = TRUE)
-n1     = as.integer(args[1])
-n2     = as.integer(args[2])
+n1     = 2
+n2     = 1
 
-chunks    = split_equal(0:99999, n1)
+chunks    = split_equal(0:99, n1)
 loop_over = chunks[[n2]]
 
 cat("Processing chunk", n2, "of", n1, "\n")
@@ -54,7 +53,7 @@ cat("Parameter sets:", min(loop_over), "-", max(loop_over), "\n\n")
 # SETUP OUTPUT DIRECTORY
 # ============================================================================
 
-dir_name_data = '/storage/homefs/bt25p365/tregs/mass_sim_results_R_cpp'
+dir_name_data = './mass_sim_results_R_cpp_local'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 cat("Output directory:", dir_name_data, "\n\n")
@@ -69,7 +68,7 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
 # ============================================================================
 
 cat("Reading parameters...\n")
-params_df = read.csv("/storage/homefs/bt25p365/tregs/lhs_parameters_ubelix.csv", stringsAsFactors = FALSE)
+params_df = read.csv("./lhs_parameters_local.csv", stringsAsFactors = FALSE)
 params_df = params_df %>% dplyr::filter(param_set_id %in% loop_over)
 cat("Loaded", nrow(params_df), "parameter sets\n\n")
 
@@ -78,7 +77,7 @@ cat("Loaded", nrow(params_df), "parameter sets\n\n")
 # ============================================================================
 
 t_max      = 5000
-num_reps   = 10 # reps per parameter set
+num_reps   = 1 # reps per parameter set
 plot_on    = 0
 if(plot_on==1){
   dir_name_frames = './frames'
@@ -121,7 +120,7 @@ cat("  n_tregs:", n_tregs, "\n\n")
 # READ TRACKING FILE
 # ============================================================================
 
-inds_read_filename = paste0('/storage/homefs/bt25p365/tregs/read_ids.rds')
+inds_read_filename = paste0('./read_ids.rds')
 if(file.exists(inds_read_filename)){
   inds_read = readRDS(inds_read_filename)
 }else{
@@ -156,7 +155,9 @@ cat("\n\n")
 # MAIN SIMULATION LOOP
 # ============================================================================
 
-for(param_set_id_use in loop_over){
+# for(param_set_id_use in loop_over){
+for(param_set_id_use in 0){
+  
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
 
   for (scenario_ind in 1:nrow(scenarios_df)){
@@ -164,7 +165,7 @@ for(param_set_id_use in loop_over){
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
     
-    source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS.R")
+    source("./MISC/ASSIGN_PARAMETERS.R")
     
     cat(paste0('[', Sys.time(), '] Processing param set ', param_set_id_use,
                ' - scenario ', scenario_ind, '/', nrow(scenarios_df)))
@@ -177,7 +178,7 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION
     # ========================================================================
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_CPP.R")
+    source("./MISC/RUN_REPS_CPP.R")
 
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
