@@ -4,6 +4,7 @@ library(tidyr)
 library(lhs)
 library(readr)
 
+setwd('/Users/burcutepekule/Dropbox/tregs_ubelix/')
 # Define parameter bounds with macrophage specificity parameters
 param_bounds = list(
   th_ROS_microbe = c(0, 1),
@@ -39,7 +40,7 @@ param_names = names(param_bounds)
 
 # Set parameters
 set.seed(123)
-n_samples = 1e5  # Total number of LHS samples to generate
+n_samples = 1e4  # Total number of LHS samples to generate
 
 # Generate LHS samples from original bounds
 cat("Generating", n_samples, "LHS samples with macrophage specificity parameters...\n")
@@ -68,7 +69,8 @@ lhs_samples$param_set_id = 0:(nrow(lhs_samples) - 1)
 lhs_samples = lhs_samples[c('param_set_id', param_names)]
 
 # Export
-output_file = "/storage/homefs/bt25p365/tregs/lhs_parameters_macspec_ubelix.csv"
+# output_file = "/storage/homefs/bt25p365/tregs/lhs_parameters_macspec_ubelix.csv"
+output_file = "./lhs_parameters_macspec_ubelix.csv"
 write.csv(lhs_samples, output_file, row.names = FALSE)
 cat("\nDataset saved to:", output_file, "\n")
 cat("Total parameter sets:", nrow(lhs_samples), "\n")

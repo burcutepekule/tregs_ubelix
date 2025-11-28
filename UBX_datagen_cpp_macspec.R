@@ -22,9 +22,9 @@ cat("\n\n")
 # ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
-source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/DATA_READ_FUNCTIONS.R")
+source("./MISC/FAST_FUNCTIONS.R")
+source("./MISC/PLOT_FUNCTIONS.R")
+source("./MISC/DATA_READ_FUNCTIONS.R")
 
 cat("\n")
 
@@ -47,7 +47,7 @@ args   = commandArgs(trailingOnly = TRUE)
 n1     = as.integer(args[1])
 n2     = as.integer(args[2])
 
-chunks    = split_equal(0:99999, n1)
+chunks    = split_equal(0:9999, n1)
 loop_over = chunks[[n2]]
 
 cat("Processing chunk", n2, "of", n1, "\n")
@@ -57,7 +57,7 @@ cat("Parameter sets:", min(loop_over), "-", max(loop_over), "\n\n")
 # SETUP OUTPUT DIRECTORY
 # ============================================================================
 
-dir_name_data = '/storage/homefs/bt25p365/tregs/mass_sim_results_R_cpp_macspec'
+dir_name_data = './mass_sim_results_R_cpp_macspec'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 cat("Output directory:", dir_name_data, "\n\n")
@@ -72,7 +72,7 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
 # ============================================================================
 
 cat("Reading parameters with macrophage specificity...\n")
-params_df = read.csv("/storage/homefs/bt25p365/tregs/lhs_parameters_macspec_ubelix.csv", stringsAsFactors = FALSE)
+params_df = read.csv("./lhs_parameters_macspec_ubelix.csv", stringsAsFactors = FALSE)
 params_df = params_df %>% dplyr::filter(param_set_id %in% loop_over)
 cat("Loaded", nrow(params_df), "parameter sets\n")
 cat("New parameters: mac_discrimination_efficiency, mac_rat_com_pat_threshold\n\n")
@@ -157,7 +157,7 @@ for(param_set_id_use in loop_over){
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
 
-    source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS_MACSPEC.R")
+    source("./MISC/ASSIGN_PARAMETERS_MACSPEC.R")
 
     cat(paste0('[', Sys.time(), '] Processing param set ', param_set_id_use,
                ' - scenario ', scenario_ind, '/', nrow(scenarios_df)))
@@ -170,7 +170,7 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION AND MACROPHAGE SPECIFICITY
     # ========================================================================
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_CPP_MACSPEC.R")
+    source("./MISC/RUN_REPS_CPP_MACSPEC.R")
 
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
