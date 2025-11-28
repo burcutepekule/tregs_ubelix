@@ -1,6 +1,7 @@
 rm(list=ls())
 library(dplyr)
 library(tidyr)
+library(zoo)
 
 # ============================================================================
 # C++ ACCELERATED DATA GENERATION SCRIPT
@@ -22,6 +23,7 @@ cat("\n\n")
 cat("Loading C++ accelerated functions...\n")
 source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
 source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
+source("/storage/homefs/bt25p365/tregs/MISC/DATA_READ_FUNCTIONS.R")
 
 cat("\n")
 
@@ -78,7 +80,7 @@ cat("Loaded", nrow(params_df), "parameter sets\n\n")
 # ============================================================================
 
 t_max      = 5000
-num_reps   = 10 # reps per parameter set
+num_reps   = 100 # reps per parameter set
 plot_on    = 0
 if(plot_on==1){
   dir_name_frames = './frames'
@@ -117,17 +119,6 @@ cat("  grid_size:", grid_size, "x", grid_size, "\n")
 cat("  n_phagocytes:", n_phagocytes, "\n")
 cat("  n_tregs:", n_tregs, "\n\n")
 
-# ============================================================================
-# READ TRACKING FILE
-# ============================================================================
-
-inds_read_filename = paste0('/storage/homefs/bt25p365/tregs/read_ids.rds')
-if(file.exists(inds_read_filename)){
-  inds_read = readRDS(inds_read_filename)
-}else{
-  inds_read = c()
-}
-loop_over = setdiff(loop_over, inds_read)
 
 cat("After filtering already processed:", length(loop_over), "parameter sets remaining\n\n")
 
@@ -182,7 +173,7 @@ for(param_set_id_use in loop_over){
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
 
-    colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
+    colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert # this sould be 9:39 - fix it when reading
     saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
                                          '_sterile_',sterile,
                                          '_tregs_',allow_tregs,

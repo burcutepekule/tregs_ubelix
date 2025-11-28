@@ -1,3 +1,46 @@
+overlay_histograms = function(x, y, 
+                               x_name = "X", 
+                               y_name = "Y",
+                               bins = 30,
+                               alpha = 0.5,
+                               colors = c("blue", "red"),
+                               title = "Overlaid Histograms") {
+  
+  # Create a data frame
+  df <- data.frame(
+    value = c(x, y),
+    group = rep(c(x_name, y_name), c(length(x), length(y)))
+  )
+  
+  # Create the plot
+  p <- ggplot(df, aes(x = value, fill = group)) +
+    geom_histogram(alpha = alpha, bins = bins, position = "identity") +
+    scale_fill_manual(values = colors) +
+    theme_minimal() +
+    labs(title = title,
+         x = "Value",
+         y = "Count",
+         fill = "Group")
+  
+  return(p)
+}
+
+# Example usage:
+# overlay_histograms(rnorm(1000), rnorm(1000, mean = 2), 
+#                    x_name = "Control", y_name = "Treatment")
+
+plot_param_vs_param = function(df, x_name, y_name) {
+  ggplot(df, aes(x = !!sym(x_name), y = !!sym(y_name))) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, color = "red") +
+    labs(
+      x = x_name,
+      y = y_name,
+      title = paste(y_name, "vs", x_name)
+    ) +
+    theme_minimal()
+}
+
 div0 = function(x, y) {
   ifelse(y == 0, 0, x / y)
 }
@@ -36,6 +79,7 @@ matrix_to_commensal_df = function() {
 }
 
 agent_colors = c(
+  epithelial_score   = "#2D3250",
   epithelial_healthy = "#B0E2FF",
   epithelial_inj_1   = "#8CB4E5",
   epithelial_inj_2   = "#6987CC",

@@ -20,6 +20,102 @@ cohens_d = function(x, y) {
   return(d)
 }
 
+calculate_js_divergence_simple = function(vec1, vec2, n_bins = 50) {
+  # Create matching histograms with the same breaks
+  breaks = seq(min(c(vec1, vec2)),
+                max(c(vec1, vec2)),
+                length.out = n_bins + 1)
+  
+  hist1 = hist(vec1, breaks = breaks, plot = FALSE)
+  hist2 = hist(vec2, breaks = breaks, plot = FALSE)
+  
+  # Convert counts to probabilities
+  p = hist1$counts / sum(hist1$counts)
+  q = hist2$counts / sum(hist2$counts)
+  
+  # Calculate JS divergence
+  js_div = JSD(rbind(p, q), unit = "log2")
+  
+  return(js_div)
+}
+
+
+calculate_js_divergence = function(vec1, vec2, n_bins = NULL, method = "sturges") {
+  
+  # If n_bins not specified, calculate it
+  if (is.null(n_bins)) {
+    n1 = length(vec1)
+    n2 = length(vec2)
+    n = n1 + n2  # Total sample size
+    
+    n_bins = switch(method,
+                     # Sturges' rule (default in R's hist)
+                     "sturges" = ceiling(log2(n) + 1),
+                     
+                     # Scott's rule (assumes normal-like distribution)
+                     "scott" = {
+                       sd_val = sd(c(vec1, vec2))
+                       if (sd_val == 0 || is.na(sd_val)) {
+                         ceiling(log2(n) + 1)  # Fallback to Sturges
+                       } else {
+                         h = 3.5 * sd_val / (n^(1/3))
+                         bins = ceiling((max(c(vec1, vec2)) - min(c(vec1, vec2))) / h)
+                         if (is.na(bins) || bins <= 0 || is.infinite(bins)) {
+                           ceiling(log2(n) + 1)  # Fallback
+                         } else {
+                           bins
+                         }
+                       }
+                     },
+                     
+                     # Freedman-Diaconis rule (robust to outliers)
+                     "fd" = {
+                       iqr_val = IQR(c(vec1, vec2))
+                       if (iqr_val == 0 || is.na(iqr_val)) {
+                         ceiling(log2(n) + 1)  # Fallback to Sturges if IQR is zero - this happens when distributions are very very different
+                       } else {
+                         h = 2 * iqr_val / (n^(1/3))
+                         bins = ceiling((max(c(vec1, vec2)) - min(c(vec1, vec2))) / h)
+                         if (is.na(bins) || bins <= 0 || is.infinite(bins)) {
+                           ceiling(log2(n) + 1)  # Fallback
+                         } else {
+                           bins
+                         }
+                       }
+                     },
+                     
+                     # Square root rule
+                     "sqrt" = ceiling(sqrt(n)),
+                     
+                     # Rice rule
+                     "rice" = ceiling(2 * n^(1/3)),
+                     
+                     # Default
+                     ceiling(log2(n) + 1)
+    )
+    
+    # Ensure reasonable bounds
+    n_bins = max(10, min(n_bins, 200))
+  }
+  
+  # Create matching histograms with the same breaks
+  breaks = seq(min(c(vec1, vec2)),
+                max(c(vec1, vec2)),
+                length.out = n_bins + 1)
+  
+  hist1 = hist(vec1, breaks = breaks, plot = FALSE)
+  hist2 = hist(vec2, breaks = breaks, plot = FALSE)
+  
+  # Convert counts to probabilities
+  p = hist1$counts / sum(hist1$counts)
+  q = hist2$counts / sum(hist2$counts)
+  
+  # Calculate JS divergence
+  js_div = suppressMessages(JSD(rbind(p, q), unit = "log2"))
+  
+  return(c(js_div, n_bins))
+}
+
 steady_state_idx = function(x, k = 20, tail_frac = 0.25,
                             tol_abs = 0.05*(150-25),     # 2.5 units
                             tol_sd  = 0.02*(150-25),# 1.25 units
