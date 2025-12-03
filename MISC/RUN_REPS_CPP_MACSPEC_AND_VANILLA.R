@@ -364,7 +364,6 @@ for (reps_in in 0:(num_reps-1)){
         )
         avg_DAMPs_vec = signals$avg_DAMPs
         avg_SAMPs_vec = signals$avg_SAMPs
-        bacteria_count_vec = signals$bacteria_counts
       } else {
         # R fallback
         avg_DAMPs_vec = get_8n_avg_signal_vectorized(
@@ -375,25 +374,23 @@ for (reps_in in 0:(num_reps-1)){
           phagocyte_x[M0_indices], phagocyte_y[M0_indices],
           act_radius_SAMPs, SAMPs, grid_size
         )
-        bacteria_count_vec = rowSums(phagocyte_bacteria_registry[M0_indices, , drop = FALSE])
       }
 
       for (idx in seq_along(M0_indices)) {
         i = M0_indices[idx]
         avg_DAMPs = avg_DAMPs_vec[idx]
         avg_SAMPs = avg_SAMPs_vec[idx]
-        bacteria_count = bacteria_count_vec[idx]
 
         if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
           phagocyte_phenotype[i] = 1
           phagocyte_active_age[i] = 1
-          phagocyte_activity_ROS[i] = activity_ROS_M1_baseline + activity_ROS_M1_step * bacteria_count
-          phagocyte_activity_engulf[i] = activity_engulf_M1_baseline + activity_engulf_M1_step * bacteria_count
+          phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
+          phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
         } else if (avg_SAMPs >= activation_threshold_SAMPs && avg_SAMPs > avg_DAMPs) {
           phagocyte_phenotype[i] = 2
           phagocyte_active_age[i] = 1
           phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-          phagocyte_activity_engulf[i] = activity_engulf_M2_baseline + activity_engulf_M2_step * bacteria_count
+          phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
         }
       }
     }
@@ -414,7 +411,6 @@ for (reps_in in 0:(num_reps-1)){
           )
           avg_DAMPs_vec = signals$avg_DAMPs
           avg_SAMPs_vec = signals$avg_SAMPs
-          bacteria_count_vec = signals$bacteria_counts
         } else {
           # R fallback
           avg_DAMPs_vec = get_8n_avg_signal_vectorized(
@@ -425,14 +421,12 @@ for (reps_in in 0:(num_reps-1)){
             phagocyte_x[candidates], phagocyte_y[candidates],
             act_radius_SAMPs, SAMPs, grid_size
           )
-          bacteria_count_vec = rowSums(phagocyte_bacteria_registry[candidates, , drop = FALSE])
         }
 
         for (idx in seq_along(candidates)) {
           i = candidates[idx]
           avg_DAMPs = avg_DAMPs_vec[idx]
           avg_SAMPs = avg_SAMPs_vec[idx]
-          bacteria_count = bacteria_count_vec[idx]
           
           if(macspec_on==1){ # perfect macrophage
             # Calculate engulfment pattern with discrimination
@@ -466,14 +460,14 @@ for (reps_in in 0:(num_reps-1)){
               # M1: Either environmental danger OR pathogen engulfment
               phagocyte_phenotype[i] = 1
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline + activity_ROS_M1_step * bacteria_count
-              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline + activity_engulf_M1_step * bacteria_count
+              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
+              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
             } else if (SAMPs_dominant && commensal_engulfment_dominant) {
               # M2: Both environmental safety AND commensal engulfment required
               phagocyte_phenotype[i] = 2
               phagocyte_active_age[i] = 1
               phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline + activity_engulf_M2_step * bacteria_count
+              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
             } else if (avg_SAMPs < activation_threshold_SAMPs && avg_DAMPs < activation_threshold_DAMPs) {
               # Revert to M0 if both signals are low
               phagocyte_phenotype[i] = 0
@@ -481,17 +475,17 @@ for (reps_in in 0:(num_reps-1)){
               phagocyte_activity_ROS[i] = activity_ROS_M0_baseline
               phagocyte_activity_engulf[i] = activity_engulf_M0_baseline
             }
-          }else{ # vanilla 
+          }else{ # vanilla
             if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
               phagocyte_phenotype[i] = 1
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline + activity_ROS_M1_step * bacteria_count
-              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline + activity_engulf_M1_step * bacteria_count
+              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
+              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
             } else if (avg_SAMPs >= activation_threshold_SAMPs && avg_SAMPs > avg_DAMPs) {
               phagocyte_phenotype[i] = 2
               phagocyte_active_age[i] = 1
               phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline + activity_engulf_M2_step * bacteria_count
+              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
             } else if (avg_SAMPs < activation_threshold_SAMPs && avg_DAMPs < activation_threshold_DAMPs) {
               phagocyte_phenotype[i] = 0
               phagocyte_active_age[i] = 0
