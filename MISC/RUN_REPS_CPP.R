@@ -7,12 +7,12 @@
 # ============================================================================
 
 for (reps_in in 0:(num_reps-1)){
-
+  
   # Initialize fields
   DAMPs = matrix(0, grid_size, grid_size)
   SAMPs = matrix(0, grid_size, grid_size)
   ROS = matrix(0, grid_size, grid_size)
-
+  
   # Initialize epithelium
   epithelium = data.frame(
     x = seq(1, grid_size, 1),
@@ -21,7 +21,7 @@ for (reps_in in 0:(num_reps-1)){
     id = seq(1, grid_size)
   )
   epithelium[injury_site, ]$level_injury = 1
-
+  
   # Initialize phagocytes
   phagocyte_x = sample(1:grid_size, n_phagocytes, TRUE)
   phagocyte_y = sample(2:grid_size, n_phagocytes, TRUE)
@@ -33,14 +33,14 @@ for (reps_in in 0:(num_reps-1)){
   phagocyte_activity_engulf = rep(activity_engulf_M0_baseline, n_phagocytes)
   phagocyte_active_age = rep(0, n_phagocytes)
   phagocyte_bacteria_registry = matrix(0, nrow = n_phagocytes, ncol = cc_phagocyte)
-
+  
   # Initialize tregs
   treg_x = sample(1:grid_size, n_tregs, TRUE)
   treg_y = sample(2:grid_size, n_tregs, TRUE)
   treg_active_age = rep(0, n_tregs)
   treg_phenotype = rep(0, n_tregs)  # 0=resting, 1=activated
   treg_activity_SAMPs_binary = rep(0, n_tregs)
-
+  
   # Initialize pathogens
   if (n_pathogens_lp == 0) {
     pathogen_coords = matrix(numeric(0), ncol = 3)
@@ -53,7 +53,7 @@ for (reps_in in 0:(num_reps-1)){
     ), ncol = 3)
     colnames(pathogen_coords) = c("x", "y", "id")
   }
-
+  
   # Initialize commensals
   commensal_coords = matrix(c(
     sample(1:grid_size, n_commensals_lp, TRUE),
@@ -61,38 +61,38 @@ for (reps_in in 0:(num_reps-1)){
     seq(1, n_commensals_lp)
   ), ncol = 3)
   colnames(commensal_coords) = c("x", "y", "id")
-
+  
   last_id_pathogen = n_pathogens_lp
   last_id_commensal = n_commensals_lp
-
+  
   # Death counters
   pathogens_killed_by_ROS = 0
   pathogens_killed_by_Mac = rep(0, 3)
   commensals_killed_by_ROS = 0
   commensals_killed_by_Mac = rep(0, 3)
-
+  
   # Longitudinal tracking
   epithelium_longitudinal = matrix(0, nrow = t_max, ncol = (max_level_injury + 1))
   macrophages_longitudinal = matrix(0, nrow = t_max, ncol = 1 + 2 * (cc_phagocyte + 1))
   microbes_longitudinal = matrix(0, nrow = t_max, ncol = 2)
   tregs_longitudinal = matrix(0, nrow = t_max, ncol = 2)
   microbes_cumdeath_longitudinal = matrix(0, nrow = t_max, ncol = 2 * 4)
-
+  
   # ============================================================================
   # MAIN SIMULATION LOOP
   # ============================================================================
   for (t in 1:t_max) {
-
+    
     # Update injury site
     injury_site_updated = which(epithelium$level_injury > 0)
-
+    
     # ========================================================================
     # UPDATE SAMPs (from activated Tregs)
     # C++ ACCELERATION: Batch update of SAMPs matrix
     # ========================================================================
     active_tregs = which(treg_phenotype == 1)
     if (length(active_tregs) > 0) {
-      if (exists("update_SAMPs_batch_cpp", mode = "function")) {
+      if (exists("update_SAMPs_batch_cpp", mode = "function") & on_1==1) {
         # C++ version (20-50x faster)
         SAMPs = update_SAMPs_batch_cpp(
           SAMPs, active_tregs, treg_x, treg_y,
@@ -100,19 +100,24 @@ for (reps_in in 0:(num_reps-1)){
         )
       } else {
         # R fallback
-        coords = cbind(treg_y[active_tregs], treg_x[active_tregs])
-        SAMPs[coords] = SAMPs[coords] +
-          treg_activity_SAMPs_binary[active_tregs] * add_SAMPs * allow_tregs
+        # coords = cbind(treg_y[active_tregs], treg_x[active_tregs])
+        # SAMPs[coords] = SAMPs[coords] +
+        #   treg_activity_SAMPs_binary[active_tregs] * add_SAMPs * allow_tregs
+        for (i in active_tregs) {
+          SAMPs[treg_y[i], treg_x[i]] = SAMPs[treg_y[i], treg_x[i]] +
+            treg_activity_SAMPs_binary[i] * add_SAMPs * allow_tregs
+          
+        }
       }
     }
-
+    
     # ========================================================================
     # UPDATE ROS (from M1 phagocytes)
     # C++ ACCELERATION: Batch update of ROS matrix
     # ========================================================================
     M1_phagocytes = which(phagocyte_phenotype == 1)
     if (length(M1_phagocytes) > 0) {
-      if (exists("update_ROS_batch_cpp", mode = "function")) {
+      if (exists("update_ROS_batch_cpp", mode = "function") & on_2==1) {
         # C++ version (20-50x faster)
         ROS = update_ROS_batch_cpp(
           ROS, M1_phagocytes, phagocyte_x, phagocyte_y,
@@ -124,7 +129,7 @@ for (reps_in in 0:(num_reps-1)){
         ROS[coords] = ROS[coords] + phagocyte_activity_ROS[M1_phagocytes] * add_ROS
       }
     }
-
+    
     # ========================================================================
     # MOVE MICROBES (UPDATED ORDER: before DAMP calculation)
     # ========================================================================
@@ -136,7 +141,7 @@ for (reps_in in 0:(num_reps-1)){
       pathogen_coords[, "x"] = pmin(pmax(pathogen_coords[, "x"] + dx, 1), grid_size)
       pathogen_coords[, "y"] = pmin(pmax(pathogen_coords[, "y"] + dy, 1), grid_size)
     }
-
+    
     if (nrow(commensal_coords) > 0) {
       dy = ifelse(commensal_coords[, "y"] == 1,
                   sample(c(1), size = nrow(commensal_coords), replace = TRUE),
@@ -145,7 +150,7 @@ for (reps_in in 0:(num_reps-1)){
       commensal_coords[, "x"] = pmin(pmax(commensal_coords[, "x"] + dx, 1), grid_size)
       commensal_coords[, "y"] = pmin(pmax(commensal_coords[, "y"] + dy, 1), grid_size)
     }
-
+    
     # ========================================================================
     # PRE-CALCULATE MICROBE COUNTS AT EPITHELIUM (y=1)
     # ========================================================================
@@ -156,7 +161,7 @@ for (reps_in in 0:(num_reps-1)){
         pathogen_epithelium_counts = tabulate(epithelium_pathogens[, "x"], nbins = grid_size)
       }
     }
-
+    
     commensal_epithelium_counts = rep(0, grid_size)
     if (nrow(commensal_coords) > 0) {
       epithelium_commensals = commensal_coords[commensal_coords[, "y"] == 1, , drop = FALSE]
@@ -164,18 +169,18 @@ for (reps_in in 0:(num_reps-1)){
         commensal_epithelium_counts = tabulate(epithelium_commensals[, "x"], nbins = grid_size)
       }
     }
-
+    
     # ========================================================================
     # UPDATE DAMPs (UPDATED: includes epithelium + microbe counts)
     # ========================================================================
     # DAMPs from epithelial injury
     DAMPs[1, ] = DAMPs[1, ] + epithelium$level_injury * add_DAMPs
-
+    
     # DAMPs from microbes touching epithelium
     DAMPs[1, ] = DAMPs[1, ] + 1 * logistic_scaled_0_to_5_quantized(
       pathogen_epithelium_counts + commensal_epithelium_counts
     ) * add_DAMPs
-
+    
     # Additional DAMPs from pathogen locations (multiplied by 0 anyway)
     DAMPs_add = matrix(0, nrow = nrow(DAMPs), ncol = ncol(DAMPs))
     if (nrow(pathogen_coords) > 0) {
@@ -194,12 +199,12 @@ for (reps_in in 0:(num_reps-1)){
       }
     }
     DAMPs = DAMPs + DAMPs_add
-
+    
     # ========================================================================
     # DIFFUSE & DECAY SIGNALS
     # C++ ACCELERATION: Matrix diffusion operations
     # ========================================================================
-    if (exists("diffuse_matrix_cpp", mode = "function")) {
+    if (exists("diffuse_matrix_cpp", mode = "function") & on_3==1) {
       # C++ version (5-10x faster)
       DAMPs = diffuse_matrix_cpp(DAMPs, diffusion_speed_DAMPs, max_cell_value_DAMPs)
       SAMPs = diffuse_matrix_cpp(SAMPs, diffusion_speed_SAMPs, max_cell_value_SAMPs)
@@ -210,20 +215,20 @@ for (reps_in in 0:(num_reps-1)){
       SAMPs = diffuse_matrix(SAMPs, diffusion_speed_SAMPs, max_cell_value_SAMPs)
       ROS = diffuse_matrix(ROS, diffusion_speed_ROS, max_cell_value_ROS)
     }
-
+    
     DAMPs = DAMPs - DAMPs_decay * DAMPs
     SAMPs = SAMPs - SAMPs_decay * SAMPs
     ROS = ROS - ros_decay * ROS
-
+    
     # ========================================================================
     # MOVE PHAGOCYTES AND TREGS
     # ========================================================================
     density_matrix_tregs = if (randomize_tregs == 1) 0 * DAMPs else DAMPs
     density_matrix_phagocytes = DAMPs
-
+    
     all_equal_treg = all(density_matrix_tregs == density_matrix_tregs[1, 1])
     all_equal_phagocytes = all(density_matrix_phagocytes == density_matrix_phagocytes[1, 1])
-
+    
     # Move tregs
     if (!all_equal_treg) {
       for (i in 1:length(treg_x)) {
@@ -252,7 +257,7 @@ for (reps_in in 0:(num_reps-1)){
       treg_x = pmin(pmax(treg_x + dx_treg, 1), grid_size)
       treg_y = pmin(pmax(treg_y + dy_treg, 1), grid_size)
     }
-
+    
     # Move phagocytes
     if (!all_equal_phagocytes) {
       for (i in 1:length(phagocyte_x)) {
@@ -281,7 +286,7 @@ for (reps_in in 0:(num_reps-1)){
       phagocyte_x = pmin(pmax(phagocyte_x + dx_phagocyte, 1), grid_size)
       phagocyte_y = pmin(pmax(phagocyte_y + dy_phagocyte, 1), grid_size)
     }
-
+    
     # ========================================================================
     # ADD NEW MICROBES
     # ========================================================================
@@ -297,11 +302,11 @@ for (reps_in in 0:(num_reps-1)){
       pathogen_coords = rbind(pathogen_coords, new_pathogen_coords)
       last_id_pathogen = last_id_pathogen + n_pathogens_lp_new
     }
-
+    
     n_commensals_lp_new_injury = round(mean(epithelium$level_injury) * rate_leak_commensal_injury *
                                          length(injury_site_updated))
     n_commensals_lp_new_baseline = round(rate_leak_commensal_baseline * grid_size)
-
+    
     total_new_commensals = n_commensals_lp_new_baseline + n_commensals_lp_new_injury
     if (total_new_commensals > 0) {
       baseline_x = sample(1:grid_size, n_commensals_lp_new_baseline, TRUE)
@@ -319,7 +324,7 @@ for (reps_in in 0:(num_reps-1)){
       commensal_coords = rbind(commensal_coords, new_commensal_coords)
       last_id_commensal = last_id_commensal + total_new_commensals
     }
-
+    
     # ========================================================================
     # PLOTTING
     # ========================================================================
@@ -337,7 +342,7 @@ for (reps_in in 0:(num_reps-1)){
         bg = "white"
       )
     }
-
+    
     # ========================================================================
     # UPDATE PHAGOCYTE PHENOTYPES
     # C++ ACCELERATION: Batch signal calculations
@@ -345,7 +350,7 @@ for (reps_in in 0:(num_reps-1)){
     M0_indices = which(phagocyte_phenotype == 0)
     M1_indices = which(phagocyte_phenotype == 1)
     M2_indices = which(phagocyte_phenotype == 2)
-
+    
     # Registry shifting every digestion_time steps
     if (t %% digestion_time == 0) {
       phagocyte_bacteria_registry = cbind(
@@ -353,11 +358,11 @@ for (reps_in in 0:(num_reps-1)){
         phagocyte_bacteria_registry[, -ncol(phagocyte_bacteria_registry)]
       )
     }
-
+    
     # Process M0 phagocytes (candidates for activation)
     if (length(M0_indices) > 0) {
       # C++ ACCELERATION: Calculate all signals at once
-      if (exists("calculate_phagocyte_signals_cpp", mode = "function")) {
+      if (exists("calculate_phagocyte_signals_cpp", mode = "function") & on_4==1) {
         signals = calculate_phagocyte_signals_cpp(
           M0_indices, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
           act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
@@ -377,13 +382,13 @@ for (reps_in in 0:(num_reps-1)){
         )
         bacteria_count_vec = rowSums(phagocyte_bacteria_registry[M0_indices, , drop = FALSE])
       }
-
+      
       for (idx in seq_along(M0_indices)) {
         i = M0_indices[idx]
         avg_DAMPs = avg_DAMPs_vec[idx]
         avg_SAMPs = avg_SAMPs_vec[idx]
         bacteria_count = bacteria_count_vec[idx]
-
+        
         if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
           phagocyte_phenotype[i] = 1
           phagocyte_active_age[i] = 1
@@ -397,17 +402,17 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     # Process M1/M2 phagocytes
     active_indices = c(M1_indices, M2_indices)
     if (length(active_indices) > 0) {
       phagocyte_active_age[active_indices] = phagocyte_active_age[active_indices] + 1
       old_enough = phagocyte_active_age[active_indices] >= active_age_limit
       candidates = active_indices[old_enough]
-
+      
       if (length(candidates) > 0) {
         # C++ ACCELERATION: Calculate all signals at once
-        if (exists("calculate_phagocyte_signals_cpp", mode = "function")) {
+        if (exists("calculate_phagocyte_signals_cpp", mode = "function") & on_4==1) {
           signals = calculate_phagocyte_signals_cpp(
             candidates, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
             act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
@@ -427,13 +432,13 @@ for (reps_in in 0:(num_reps-1)){
           )
           bacteria_count_vec = rowSums(phagocyte_bacteria_registry[candidates, , drop = FALSE])
         }
-
+        
         for (idx in seq_along(candidates)) {
           i = candidates[idx]
           avg_DAMPs = avg_DAMPs_vec[idx]
           avg_SAMPs = avg_SAMPs_vec[idx]
           bacteria_count = bacteria_count_vec[idx]
-
+          
           if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
             phagocyte_phenotype[i] = 1
             phagocyte_active_age[i] = 1
@@ -453,7 +458,7 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     # ========================================================================
     # UPDATE TREG ACTIVE AGE
     # ========================================================================
@@ -461,42 +466,42 @@ for (reps_in in 0:(num_reps-1)){
     if (length(active_treg_indices) > 0) {
       old_tregs = active_treg_indices[treg_active_age[active_treg_indices] >= active_age_limit]
       young_tregs = active_treg_indices[treg_active_age[active_treg_indices] < active_age_limit]
-
+      
       if (length(young_tregs) > 0) {
         treg_active_age[young_tregs] = treg_active_age[young_tregs] + 1
       }
-
+      
       if (length(old_tregs) > 0) {
         treg_phenotype[old_tregs] = 0
         treg_active_age[old_tregs] = 0
         treg_activity_SAMPs_binary[old_tregs] = 0
       }
     }
-
+    
     # ========================================================================
     # ENGULFMENT PROCESS
     # ========================================================================
     phagocyte_positions = paste(phagocyte_x, phagocyte_y, sep = "_")
-
+    
     for (i in 1:length(phagocyte_x)) {
       px = phagocyte_x[i]
       py = phagocyte_y[i]
-
+      
       # Pathogen engulfment
       if (nrow(pathogen_coords) > 0) {
         pathogen_overlap = (pathogen_coords[, "x"] == px) & (pathogen_coords[, "y"] == py)
         pathogen_indices = which(pathogen_overlap)
-
+        
         if (length(pathogen_indices) > 0) {
           engulf_success = runif(length(pathogen_indices)) < phagocyte_activity_engulf[i]
           indices_to_engulf = pathogen_indices[engulf_success]
-
+          
           if (length(indices_to_engulf) > 0) {
             phagocyte_pathogens_engulfed[i] = phagocyte_pathogens_engulfed[i] + length(indices_to_engulf)
             pathogen_coords = pathogen_coords[-indices_to_engulf, , drop = FALSE]
-
+            
             # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function")) {
+            if (exists("shift_insert_fast_cpp", mode = "function") & on_5==1) {
               phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
                 phagocyte_bacteria_registry[i, ],
                 rep(1, length(indices_to_engulf))
@@ -507,29 +512,29 @@ for (reps_in in 0:(num_reps-1)){
                 rep(1, length(indices_to_engulf))
               )
             }
-
+            
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             pathogens_killed_by_Mac[phagocyte_phenotype_index] =
               pathogens_killed_by_Mac[phagocyte_phenotype_index] + length(indices_to_engulf)
           }
         }
       }
-
+      
       # Commensal engulfment
       if (nrow(commensal_coords) > 0) {
         commensal_overlap = (commensal_coords[, "x"] == px) & (commensal_coords[, "y"] == py)
         commensal_indices = which(commensal_overlap)
-
+        
         if (length(commensal_indices) > 0) {
           engulf_success = runif(length(commensal_indices)) < phagocyte_activity_engulf[i]
           indices_to_engulf = commensal_indices[engulf_success]
-
+          
           if (length(indices_to_engulf) > 0) {
             phagocyte_commensals_engulfed[i] = phagocyte_commensals_engulfed[i] + length(indices_to_engulf)
             commensal_coords = commensal_coords[-indices_to_engulf, , drop = FALSE]
-
+            
             # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function")) {
+            if (exists("shift_insert_fast_cpp", mode = "function") & on_5==1) {
               phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
                 phagocyte_bacteria_registry[i, ],
                 rep(1, length(indices_to_engulf))
@@ -540,7 +545,7 @@ for (reps_in in 0:(num_reps-1)){
                 rep(1, length(indices_to_engulf))
               )
             }
-
+            
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             commensals_killed_by_Mac[phagocyte_phenotype_index] =
               commensals_killed_by_Mac[phagocyte_phenotype_index] + length(indices_to_engulf)
@@ -548,7 +553,7 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     # ========================================================================
     # TREG ACTIVATION & EFFECTOR ACTIONS
     # CRITICAL: Always consume random numbers to maintain stream synchronization!
@@ -557,14 +562,14 @@ for (reps_in in 0:(num_reps-1)){
     M1_phagocyte_indices = which(phagocyte_phenotype == 1)
     M2_phagocyte_indices = which(phagocyte_phenotype == 2)
     M_activate_phagocyte_indices = c(M1_phagocyte_indices, M2_phagocyte_indices)
-
+    
     if (length(M_activate_phagocyte_indices) > 0) {
       for (i in M_activate_phagocyte_indices) {
         px = phagocyte_x[i]
         py = phagocyte_y[i]
-
+        
         # C++ ACCELERATION: find nearby tregs
-        if (exists("find_nearby_tregs_cpp", mode = "function")) {
+        if (exists("find_nearby_tregs_cpp", mode = "function") & on_6==1) {
           nearby_treg_indices = find_nearby_tregs_cpp(
             px, py, treg_x, treg_y, treg_vicinity_effect
           )
@@ -575,11 +580,11 @@ for (reps_in in 0:(num_reps-1)){
           nearby_treg_indices = which(treg_distances_x <= treg_vicinity_effect &
                                         treg_distances_y <= treg_vicinity_effect)
         }
-
+        
         if (length(nearby_treg_indices) > 0) {
           num_pat_antigens = phagocyte_pathogens_engulfed[i]
           num_com_antigens = phagocyte_commensals_engulfed[i]
-
+          
           if ((num_pat_antigens + num_com_antigens) > 0) {
             # ALWAYS calculate and sample (to maintain stream synchronization)
             rat_com_pat_real = num_com_antigens / (num_com_antigens + num_pat_antigens)
@@ -587,10 +592,10 @@ for (reps_in in 0:(num_reps-1)){
               treg_discrimination_efficiency * (rat_com_pat_real * precision)
             beta = (1 - treg_discrimination_efficiency) * 1 +
               treg_discrimination_efficiency * ((1 - rat_com_pat_real) * precision)
-
+            
             # ALWAYS consume from random stream (both Tregs ON and OFF)
             rat_com_pat = sample_rbeta(alpha, beta)
-
+            
             # But ONLY apply the effect if Tregs are allowed to work
             if (rat_com_pat > rat_com_pat_threshold) {
               treg_phenotype[nearby_treg_indices] = 1
@@ -601,13 +606,13 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     # ========================================================================
     # KILL MICROBES WITH ROS
     # C++ ACCELERATION: Batch killing with single function call (HUGE SPEEDUP)
     # ========================================================================
     if (nrow(pathogen_coords) > 0) {
-      if (exists("kill_microbes_with_ros_cpp", mode = "function")) {
+      if (exists("kill_microbes_with_ros_cpp", mode = "function") & on_7==1) {
         # C++ version (50-100x faster!)
         result = kill_microbes_with_ros_cpp(
           pathogen_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
@@ -627,9 +632,9 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     if (nrow(commensal_coords) > 0) {
-      if (exists("kill_microbes_with_ros_cpp", mode = "function")) {
+      if (exists("kill_microbes_with_ros_cpp", mode = "function") & on_7==1) {
         # C++ version (50-100x faster!)
         result = kill_microbes_with_ros_cpp(
           commensal_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
@@ -649,15 +654,15 @@ for (reps_in in 0:(num_reps-1)){
         }
       }
     }
-
+    
     # ========================================================================
     # UPDATE EPITHELIAL INJURY
     # C++ ACCELERATION: Batch ROS calculation
     # ========================================================================
     epithelium_x = epithelium$x
-
+    
     # C++ ACCELERATION: Calculate ROS for all epithelial cells at once
-    if (exists("calculate_epithelial_ros_cpp", mode = "function")) {
+    if (exists("calculate_epithelial_ros_cpp", mode = "function") & on_8==1) {
       ros_means = calculate_epithelial_ros_cpp(
         epithelium_x, act_radius_ROS, ROS, grid_size
       )
@@ -666,40 +671,42 @@ for (reps_in in 0:(num_reps-1)){
       ros_means = numeric(length(epithelium_x))
       for (i in seq_along(epithelium_x)) {
         px = epithelium_x[i]
-        x_coordinates = pmax(1, pmin(grid_size, (px - act_radius_ROS):(px + act_radius_ROS)))
+        x_start = max(1, px - act_radius_ROS)
+        x_end = min(grid_size, px + act_radius_ROS)
+        x_coordinates = x_start:x_end
         ros_means[i] = mean(ROS[1, x_coordinates])
       }
     }
-
+    
     # Vectorized injury updates
     epithelium$level_injury = epithelium$level_injury +
       logistic_scaled_0_to_5_quantized(pathogen_epithelium_counts)
-
+    
     # ROS-based injury (vectorized)
     epithelium$level_injury = epithelium$level_injury + as.integer(ros_means > th_ROS_epith_recover)
-
+    
     # Apply maximum injury constraint (vectorized)
     epithelium$level_injury = pmin(epithelium$level_injury, max_level_injury)
-
+    
     # RECOVERY: Stochastic recovery (must loop for random number consumption order)
     for (i in 1:nrow(epithelium)) {
       if (epithelium$level_injury[i] > 0 && runif(1) < epith_recovery_chance) {
         epithelium$level_injury[i] = max(0, epithelium$level_injury[i] - 1)
       }
     }
-
+    
     # ========================================================================
     # SAVE ABUNDANCES
     # ========================================================================
     epithelium_longitudinal[t, ] = as.numeric(table(factor(epithelium$level_injury, levels = 0:5)))
-
+    
     phagocyte_counts = c(
       sum(phagocyte_phenotype == 0),
       tabulate(phagocyte_active_age[phagocyte_phenotype == 1] + 1, cc_phagocyte + 1),
       tabulate(phagocyte_active_age[phagocyte_phenotype == 2] + 1, cc_phagocyte + 1)
     )
     macrophages_longitudinal[t, ] = phagocyte_counts
-
+    
     microbes_longitudinal[t, ] = c(nrow(commensal_coords), nrow(pathogen_coords))
     tregs_longitudinal[t, ] = c(sum(treg_phenotype == 0), sum(treg_phenotype == 1))
     microbes_cumdeath_longitudinal[t, ] = c(
@@ -707,7 +714,7 @@ for (reps_in in 0:(num_reps-1)){
       pathogens_killed_by_ROS, pathogens_killed_by_Mac
     )
   }
-
+  
   # ============================================================================
   # SAVE LONGITUDINAL DATA
   # ============================================================================
@@ -718,7 +725,7 @@ for (reps_in in 0:(num_reps-1)){
     tregs_longitudinal,
     microbes_cumdeath_longitudinal
   )
-
+  
   colnames(longitudinal_df) = colnames_insert
   
   longitudinal_df$t = 1:t_max
@@ -727,14 +734,14 @@ for (reps_in in 0:(num_reps-1)){
   longitudinal_df$randomize_tregs = randomize_tregs
   longitudinal_df$param_set_id = param_set_use$param_set_id
   longitudinal_df$rep_id = reps_in
-
+  
   
   longitudinal_df = longitudinal_df %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
-                                                                       5*epithelial_inj_1+
-                                                                       4*epithelial_inj_2+
-                                                                       3*epithelial_inj_3+
-                                                                       2*epithelial_inj_4+
-                                                                       1*epithelial_inj_5)
+                                                        5*epithelial_inj_1+
+                                                        4*epithelial_inj_2+
+                                                        3*epithelial_inj_3+
+                                                        2*epithelial_inj_4+
+                                                        1*epithelial_inj_5)
   
   longitudinal_df$time_ss = steady_state_idx(longitudinal_df$epithelial_score)
   
@@ -742,14 +749,14 @@ for (reps_in in 0:(num_reps-1)){
   
   longitudinal_df = longitudinal_df %>%
     dplyr::select(t, 
-           sterile, 
-           tregs_on,
-           randomize_tregs, 
-           param_set_id, 
-           rep_id, 
-           epithelial_score, 
-           time_ss,
-           everything())
+                  sterile, 
+                  tregs_on,
+                  randomize_tregs, 
+                  param_set_id, 
+                  rep_id, 
+                  epithelial_score, 
+                  time_ss,
+                  everything())
   
   longitudinal_df_keep = rbind(longitudinal_df_keep, longitudinal_df)
 }

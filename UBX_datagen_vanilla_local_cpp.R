@@ -3,6 +3,7 @@ library(dplyr)
 library(tidyr)
 library(zoo)
 library(ggplot2)
+set.seed(42)
 # ============================================================================
 # C++ ACCELERATED DATA GENERATION SCRIPT
 # ============================================================================
@@ -25,9 +26,18 @@ cat("Loading C++ accelerated functions...\n")
 cpp_on    = T
 one_level = F
 
+on_1 = 1 #update_SAMPs_batch_cpp
+on_2 = 0 #update_ROS_batch_cpp -> totally different
+on_3 = 1 #diffuse_matrix_cpp -> slightly different
+on_4 = 1 #calculate_phagocyte_signals_cpp
+on_5 = 1 #shift_insert_fast_cpp
+on_6 = 1 #find_nearby_tregs_cpp
+on_7 = 1 #kill_microbes_with_ros_cpp
+on_8 = 1 #calculate_epithelial_ros_cpp
+
 param_set_pick = 5
-t_max      = 1000
-num_reps   = 100 # reps per parameter set
+t_max      = 500
+num_reps   = 20 # reps per parameter set
 
 if(cpp_on & one_level){
   source("./MISC/FAST_FUNCTIONS_CPP_ONELEVEL.R")
@@ -119,7 +129,7 @@ cat("  n_tregs:", n_tregs, "\n\n")
 
 scenarios_df = expand.grid(
   sterile         = c(1),
-  allow_tregs     = c(0, 1),
+  allow_tregs     = c(0),
   randomize_tregs = c(0)
 )
 # DOESN'T MAKE SENSE TO RUN THIS
