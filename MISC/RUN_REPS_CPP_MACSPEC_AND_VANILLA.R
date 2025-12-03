@@ -444,7 +444,7 @@ for (reps_in in 0:(num_reps-1)){
             SAMPs_dominant = (avg_SAMPs >= activation_threshold_SAMPs && avg_SAMPs > avg_DAMPs)
             
             # Determine engulfment pattern dominance (with discrimination)
-            pathogen_engulfment_dominant = FALSE
+            pathogen_engulfment_dominant  = FALSE
             commensal_engulfment_dominant = FALSE
             
             if ((num_pat_engulfed + num_com_engulfed) > 0) {
@@ -457,7 +457,7 @@ for (reps_in in 0:(num_reps-1)){
               
               rat_com_pat = sample_rbeta(alpha, beta)
               
-              pathogen_engulfment_dominant = (rat_com_pat <= (1 - mac_rat_com_pat_threshold))
+              pathogen_engulfment_dominant  = rat_com_pat <= (1 - mac_rat_com_pat_threshold)
               commensal_engulfment_dominant = (rat_com_pat > mac_rat_com_pat_threshold)
             }
             

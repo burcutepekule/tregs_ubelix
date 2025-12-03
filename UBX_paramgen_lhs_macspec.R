@@ -34,7 +34,6 @@ param_bounds = list(
 )
 
 param_names = names(param_bounds)
-
 # Set parameters
 set.seed(123)
 n_samples = 1e6  # Total number of LHS samples to generate - make it 10 times higher for filtering later
@@ -64,7 +63,10 @@ lhs_samples$active_age_limit = round(lhs_samples$active_age_limit)
 # activity_engulf_M2_baseline should be lower than activity_engulf_M1_baseline
 lhs_samples = lhs_samples %>% dplyr::filter(th_ROS_microbe<th_ROS_epith_recover)
 lhs_samples = lhs_samples %>% dplyr::filter(activity_engulf_M2_baseline<activity_engulf_M1_baseline)
+
 lhs_samples$mac_rat_com_pat_threshold = lhs_samples$rat_com_pat_threshold # TO HAVE A FAIR COMPARISON
+param_names = c(param_names, 'mac_rat_com_pat_threshold')
+
 lhs_samples = lhs_samples[1:(n_samples/10),]
 
 # Add parameter set ID
