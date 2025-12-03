@@ -663,10 +663,14 @@ for (reps_in in 0:(num_reps-1)){
       )
     } else {
       # R fallback
+      # FIXED: Clamp range endpoints to avoid duplicate indices at boundaries
       ros_means = numeric(length(epithelium_x))
       for (i in seq_along(epithelium_x)) {
         px = epithelium_x[i]
-        x_coordinates = pmax(1, pmin(grid_size, (px - act_radius_ROS):(px + act_radius_ROS)))
+        # Clamp the start and end of the range, not each element
+        x_start = max(1, px - act_radius_ROS)
+        x_end = min(grid_size, px + act_radius_ROS)
+        x_coordinates = x_start:x_end
         ros_means[i] = mean(ROS[1, x_coordinates])
       }
     }

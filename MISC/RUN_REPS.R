@@ -535,9 +535,12 @@ for (reps_in in 0:num_reps){
     # ========================================================================
     for (i in 1:nrow(epithelium)) {
       px = epithelium$x[i]
-      
+
       # Get ROS values in vicinity
-      x_coordinates = pmax(1, pmin(grid_size, (px - act_radius_ROS):(px + act_radius_ROS)))
+      # FIXED: Clamp range endpoints to avoid duplicate indices at boundaries
+      x_start = max(1, px - act_radius_ROS)
+      x_end = min(grid_size, px + act_radius_ROS)
+      x_coordinates = x_start:x_end
       ros_values = ROS[1, x_coordinates]
       mean_ros = mean(ros_values)
       
