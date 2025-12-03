@@ -32,7 +32,6 @@ for (reps_in in 0:(num_reps-1)){
   phagocyte_activity_ROS = rep(activity_ROS_M0_baseline, n_phagocytes)
   phagocyte_activity_engulf = rep(activity_engulf_M0_baseline, n_phagocytes)
   phagocyte_active_age = rep(0, n_phagocytes)
-  phagocyte_bacteria_registry = matrix(0, nrow = n_phagocytes, ncol = cc_phagocyte)
 
   # Initialize tregs
   treg_x = sample(1:grid_size, n_tregs, TRUE)
@@ -346,20 +345,12 @@ for (reps_in in 0:(num_reps-1)){
     M1_indices = which(phagocyte_phenotype == 1)
     M2_indices = which(phagocyte_phenotype == 2)
 
-    # Registry shifting every digestion_time steps
-    if (t %% digestion_time == 0) {
-      phagocyte_bacteria_registry = cbind(
-        matrix(0, nrow = nrow(phagocyte_bacteria_registry), ncol = 1),
-        phagocyte_bacteria_registry[, -ncol(phagocyte_bacteria_registry)]
-      )
-    }
-
     # Process M0 phagocytes (candidates for activation)
     if (length(M0_indices) > 0) {
       # C++ ACCELERATION: Calculate all signals at once
       if (exists("calculate_phagocyte_signals_cpp", mode = "function")) {
         signals = calculate_phagocyte_signals_cpp(
-          M0_indices, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
+          M0_indices, phagocyte_x, phagocyte_y,
           act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
         )
         avg_DAMPs_vec = signals$avg_DAMPs
@@ -406,7 +397,7 @@ for (reps_in in 0:(num_reps-1)){
         # C++ ACCELERATION: Calculate all signals at once
         if (exists("calculate_phagocyte_signals_cpp", mode = "function")) {
           signals = calculate_phagocyte_signals_cpp(
-            candidates, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
+            candidates, phagocyte_x, phagocyte_y,
             act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
           )
           avg_DAMPs_vec = signals$avg_DAMPs
@@ -538,19 +529,6 @@ for (reps_in in 0:(num_reps-1)){
             phagocyte_pathogens_engulfed[i] = phagocyte_pathogens_engulfed[i] + length(indices_to_engulf)
             pathogen_coords = pathogen_coords[-indices_to_engulf, , drop = FALSE]
 
-            # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function")) {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            } else {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            }
-
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             pathogens_killed_by_Mac[phagocyte_phenotype_index] =
               pathogens_killed_by_Mac[phagocyte_phenotype_index] + length(indices_to_engulf)
@@ -570,19 +548,6 @@ for (reps_in in 0:(num_reps-1)){
           if (length(indices_to_engulf) > 0) {
             phagocyte_commensals_engulfed[i] = phagocyte_commensals_engulfed[i] + length(indices_to_engulf)
             commensal_coords = commensal_coords[-indices_to_engulf, , drop = FALSE]
-
-            # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function")) {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            } else {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            }
 
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             commensals_killed_by_Mac[phagocyte_phenotype_index] =
