@@ -8,6 +8,9 @@
 #      - M2 only if both SAMPs and commensal engulfment dominate
 # ============================================================================
 
+# Load and compile C++ functions
+source('MISC/FAST_FUNCTIONS_CPP.R')
+
 for (reps_in in 0:(num_reps-1)){
 
   # Initialize fields
