@@ -13,23 +13,36 @@ source("./MISC/PLOT_FUNCTIONS.R")
 source("./MISC/DATA_READ_FUNCTIONS.R")
 
 df_params              = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/lhs_parameters_ubelix.csv', show_col_types = FALSE)
-df_params_tregs_matter = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_matter_parameters_ubelix.csv', show_col_types = FALSE)
+df_params_tregs_better = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_better_parameters_ubelix.csv', show_col_types = FALSE)
 df_params_tregs_worse  = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_worse_parameters_ubelix.csv', show_col_types = FALSE)
-df_params_tregs_matter$param_set_id = df_params_tregs_matter$param_set_id+(max(df_params$param_set_id)+1)
-df_params_tregs_worse$param_set_id  = df_params_tregs_worse$param_set_id+(2*max(df_params$param_set_id)+1)
-df_params_merged                    = rbind(df_params, df_params_tregs_matter, df_params_tregs_worse)
+max_param_id_uniform   = max(df_params$param_set_id)
+df_params_tregs_better$param_set_id = df_params_tregs_better$param_set_id+(max_param_id_uniform+1)
+df_params_tregs_worse$param_set_id  = df_params_tregs_worse$param_set_id+(2*max_param_id_uniform+1)
+df_params_merged                    = rbind(df_params, df_params_tregs_better, df_params_tregs_worse)
 
 df_results_keep              = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd.rds')
-df_results_keep_tregs_matter = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_matter.rds')
+df_results_keep_tregs_better = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_better.rds')
 df_results_keep_tregs_worse  = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_worse.rds')
-df_results_keep_tregs_matter$param_set_id = df_results_keep_tregs_matter$param_set_id+(max(df_params$param_set_id)+1)
-df_results_keep_tregs_worse$param_set_id  = df_results_keep_tregs_worse$param_set_id+(2*max(df_params$param_set_id)+1)
-df_results_keep_merged = rbind(df_results_keep, df_results_keep_tregs_matter, df_results_keep_tregs_worse)
-
+df_results_keep_tregs_better$param_set_id = df_results_keep_tregs_better$param_set_id+(max_param_id_uniform+1)
+df_results_keep_tregs_worse$param_set_id  = df_results_keep_tregs_worse$param_set_id+(2*max_param_id_uniform+1)
+df_results_keep_merged = rbind(df_results_keep, df_results_keep_tregs_better, df_results_keep_tregs_worse)
 
 df_results_keep = df_results_keep_merged
 df_params       = df_params_merged
-length(unique(df_results_keep$param_set_id))
+
+df_params = df_params %>% dplyr::filter(!(param_set_id %in% exclude_param_id))
+df_results_keep = df_results_keep %>% dplyr::filter(!(param_set_id %in% exclude_param_id))
+
+if(filter_M1_better==1){
+  df_params = df_params %>% dplyr::filter(activity_engulf_M1_baseline>activity_engulf_M2_baseline)
+  ids_use   = unique(df_params %>% pull(param_set_id))
+  df_results_keep = df_results_keep %>% dplyr::filter(param_set_id %in% ids_use)
+}
+
+#====== save merged parameter sets as .csv
+output_file = "./lhs_parameters_ubelix_merged.csv"
+write.csv(df_params, output_file, row.names = FALSE)
+#====== save merged parameter sets as .csv
 
 # --- filter for complete # of reps 
 reps_df       = as.data.frame(table(df_results_keep$param_set_id))
@@ -83,7 +96,7 @@ df_comparisons = df_comparisons %>% dplyr::select(param_set_id, injury_type, dif
 df_comparisons = merge(df_comparisons, distinct(df_results[c('param_set_id','d_10','d_21','d_43','d_54')]), by='param_set_id')
 
 #----- filter based on cohen's d since you are looking for differences!
-df_comparisons_below= df_comparisons %>% dplyr::filter((injury_type=='pathogenic' & abs(d_10)<jsd_th)|(injury_type=='sterile' & abs(d_43)<jsd_th))
+df_comparisons_below = df_comparisons %>% dplyr::filter((injury_type=='pathogenic' & abs(d_10)<jsd_th)|(injury_type=='sterile' & abs(d_43)<jsd_th))
 # tol_in              = 125*0.15 # this is NOT over epithelial cells (so don't use 25*stg), it's over epithelial score! max diff is 6*25-1*25=125!
 # or get tol_in based on the range that is not significant!
 if(is.na(tol_in)){

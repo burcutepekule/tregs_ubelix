@@ -16,6 +16,8 @@ dfp = dfp %>%
     TRUE ~ "other"  # everything else stays gray
   ))
 
+saveRDS(dfp,'dfp_merged.rds')
+
 # Create separate color assignment for blue and pink regions
 # Use simple direct mapping based on euclidean distance
 

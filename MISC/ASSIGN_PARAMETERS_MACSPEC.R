@@ -30,7 +30,8 @@ activation_threshold_SAMPs = param_set_use$activation_threshold_SAMPs
 activity_engulf_M0_baseline = param_set_use$activity_engulf_M0_baseline
 activity_engulf_M1_baseline = param_set_use$activity_engulf_M1_baseline
 activity_engulf_M2_baseline = param_set_use$activity_engulf_M2_baseline
-activity_engulf_max = 0.99
+activity_engulf_M1_max = 0.99
+activity_engulf_M2_max = 0.75 # make it lower
 
 # ROS production activities
 activity_ROS_M0_baseline = 0.00
@@ -53,7 +54,7 @@ treg_vicinity_effect = 1
 treg_discrimination_efficiency = param_set_use$treg_discrimination_efficiency
 # allow_tregs_to_suppress_cognate = FALSE
 
-# NEW: Macrophage specificity parameters
+# Macrophage specificity parameters
 mac_discrimination_efficiency = param_set_use$mac_discrimination_efficiency
 mac_rat_com_pat_threshold = param_set_use$mac_rat_com_pat_threshold
 
@@ -68,6 +69,6 @@ precision_treg = 10 * (exp(5 * treg_discrimination_efficiency))
 precision_mac = 10 * (exp(5 * mac_discrimination_efficiency))
 
 # Calculate step sizes for activity increases
-activity_engulf_M1_step = (activity_engulf_max - activity_engulf_M1_baseline) / cc_phagocyte
-activity_engulf_M2_step = (activity_engulf_max - activity_engulf_M2_baseline) / cc_phagocyte
+activity_engulf_M1_step = (activity_engulf_M1_max - activity_engulf_M1_baseline) / cc_phagocyte
+activity_engulf_M2_step = (activity_engulf_M2_max - activity_engulf_M2_baseline) / cc_phagocyte
 activity_ROS_M1_step = (activity_ROS_max - activity_ROS_M1_baseline) / cc_phagocyte

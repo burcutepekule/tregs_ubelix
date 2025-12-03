@@ -324,7 +324,8 @@ for (reps_in in 0:(num_reps-1)){
     # PLOTTING
     # ========================================================================
     if (plot_on == 1 & (t %% plot_every == 0 | t == 1)) {
-      source('/storage/homefs/bt25p365/tregs/MISC/CONVERT_TO_DATAFRAME.R')
+      # source('/storage/homefs/bt25p365/tregs/MISC/CONVERT_TO_DATAFRAME.R')
+      source('./MISC/CONVERT_TO_DATAFRAME.R')
       p = plot_simtime_simple()
       ggsave(
         paste0(dir_name_frames, "/frame_param_",param_set_id_use,"_rep_", reps_in, "_STERILE_", sterile, "_TREGS_",
@@ -740,7 +741,7 @@ for (reps_in in 0:(num_reps-1)){
   
   
   longitudinal_df = longitudinal_df %>%
-    select(t, 
+    dplyr::select(t, 
            sterile, 
            tregs_on,
            randomize_tregs, 

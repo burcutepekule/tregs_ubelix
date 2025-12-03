@@ -1,4 +1,5 @@
 #!/bin/bash
+#SBATCH --account=gratis
 #SBATCH --job-name=treg_array_cpp
 #SBATCH --partition=epyc2
 #SBATCH --array=0-999

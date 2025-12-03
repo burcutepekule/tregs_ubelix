@@ -80,7 +80,7 @@ if(length(inds2read)>0){
       paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_1_tregs_1_trnd_0.rds'),
       paste0(path, 'longitudinal_df_param_set_id_', i, '_sterile_1_tregs_1_trnd_1.rds')
     )
-    if(any(file.info(files_to_check)$size<100)){
+    if(any(file.info(files_to_check)$size<150000)){
       processed_indices      = c(processed_indices, i) #add and skip
       message("Skipped one")
     }else{

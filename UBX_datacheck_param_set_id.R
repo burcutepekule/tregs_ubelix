@@ -8,11 +8,7 @@ source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/PLOT_FUNCTIONS.R")
 source("/Users/burcutepekule/Dropbox/tregs_ubelix/MISC/DATA_READ_FUNCTIONS.R")
 
 path         = "/Users/burcutepekule/Desktop/mass_sim_results_R_cpp/"
-param_id     = 15202
-param_id     = 19002
-param_id     = 27004
-param_id     = 29510
-param_id     = 67500
+param_id     = 81709
 
 rep_ind_vec  = sample(0:99, 100) # if you plot all, it is a lot 
 # rep_ind_vec  = c(34,45,54,61,80)

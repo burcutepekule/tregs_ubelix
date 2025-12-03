@@ -13,23 +13,32 @@ source("./MISC/PLOT_FUNCTIONS.R")
 source("./MISC/DATA_READ_FUNCTIONS.R")
 
 df_params              = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/lhs_parameters_ubelix.csv', show_col_types = FALSE)
-df_params_tregs_matter = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_matter_parameters_ubelix.csv', show_col_types = FALSE)
+df_params_tregs_better = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_better_parameters_ubelix.csv', show_col_types = FALSE)
 df_params_tregs_worse  = read_csv('/Users/burcutepekule/Dropbox/tregs_ubelix/tregs_worse_parameters_ubelix.csv', show_col_types = FALSE)
-df_params_tregs_matter$param_set_id = df_params_tregs_matter$param_set_id+(max(df_params$param_set_id)+1)
-df_params_tregs_worse$param_set_id  = df_params_tregs_worse$param_set_id+(2*max(df_params$param_set_id)+1)
-df_params_merged                    = rbind(df_params, df_params_tregs_matter, df_params_tregs_worse)
+max_param_id_uniform   = max(df_params$param_set_id)
+df_params_tregs_better$param_set_id = df_params_tregs_better$param_set_id+(max_param_id_uniform+1)
+df_params_tregs_worse$param_set_id  = df_params_tregs_worse$param_set_id+(2*max_param_id_uniform+1)
+df_params_merged                    = rbind(df_params, df_params_tregs_better, df_params_tregs_worse)
 
 df_results_keep              = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd.rds')
-df_results_keep_tregs_matter = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_matter.rds')
+df_results_keep_tregs_better = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_better.rds')
 df_results_keep_tregs_worse  = readRDS('/Users/burcutepekule/Dropbox/tregs_ubelix/data_cpp_read_jsd_tregs_worse.rds')
-df_results_keep_tregs_matter$param_set_id = df_results_keep_tregs_matter$param_set_id+(max(df_params$param_set_id)+1)
-df_results_keep_tregs_worse$param_set_id  = df_results_keep_tregs_worse$param_set_id+(2*max(df_params$param_set_id)+1)
-df_results_keep_merged = rbind(df_results_keep, df_results_keep_tregs_matter, df_results_keep_tregs_worse)
-
+df_results_keep_tregs_better$param_set_id = df_results_keep_tregs_better$param_set_id+(max_param_id_uniform+1)
+df_results_keep_tregs_worse$param_set_id  = df_results_keep_tregs_worse$param_set_id+(2*max_param_id_uniform+1)
+df_results_keep_merged = rbind(df_results_keep, df_results_keep_tregs_better, df_results_keep_tregs_worse)
 
 df_results_keep = df_results_keep_merged
 df_params       = df_params_merged
 length(unique(df_results_keep$param_set_id))
+
+df_params = df_params %>% dplyr::filter(!(param_set_id %in% exclude_param_id))
+df_results_keep = df_results_keep %>% dplyr::filter(!(param_set_id %in% exclude_param_id))
+
+if(filter_M1_better==1){
+  df_params = df_params %>% dplyr::filter(activity_engulf_M1_baseline>activity_engulf_M2_baseline)
+  ids_use   = unique(df_params %>% pull(param_set_id))
+  df_results_keep = df_results_keep %>% dplyr::filter(param_set_id %in% ids_use)
+}
 
 # --- filter for complete # of reps 
 reps_df       = as.data.frame(table(df_results_keep$param_set_id))
@@ -264,14 +273,14 @@ p = ggplot(dfp, aes(x = x, y = y, shape = injury_type, color = color_group)) +
     breaks = sort(c(seq(0, 1, by=0.1), cohens_th))
   ) +
   guides( # 3 columns for legends  # <-- REMOVED the + here
-    color = guide_legend(ncol = 5),
-    shape = guide_legend(ncol = 5)
+    color = guide_legend(ncol = 12),
+    shape = guide_legend(ncol = 12)
   )
 
 ggsave(
   filename = paste0("./treg_better_JSD_merged.png"),
   plot = p,
-  width = 12,
+  width = 17,
   height = 6,
   dpi = 300,
   bg='white'
