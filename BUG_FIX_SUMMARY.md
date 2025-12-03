@@ -3,8 +3,13 @@
 ## Problem
 When running `UBX_datagen_vanilla_local_cpp.R` with `cpp_on = T` vs `cpp_on = F` (and `one_level = F`), different results were obtained despite using the same random seed.
 
-## Root Cause
-The bug was in the **epithelial ROS calculation** where the R fallback implementation created duplicate indices at grid boundaries, while the C++ implementation did not.
+## Root Causes (Multiple Bugs Fixed)
+
+### Bug 1: Epithelial ROS calculation boundary issue
+The R fallback implementation created duplicate indices at grid boundaries, while the C++ implementation did not.
+
+### Bug 2: **CRITICAL** - Duplicate location handling in batch updates (MAIN ISSUE)
+The R fallback for batch signal updates did not correctly handle multiple agents at the same grid location!
 
 ### R Version (Buggy):
 ```r
@@ -64,5 +69,49 @@ After this fix:
 - No more duplicate index calculations at boundaries
 - Consistent epithelial ROS exposure calculations across both implementations
 
-## Note
-The C++ implementation was correct all along. The bug was only in the R fallback version that gets used when `cpp_on = F` or when C++ compilation fails.
+## Bug 2 Details: Batch Update Duplicate Location Bug
+
+### The Critical Issue:
+When multiple agents (tregs or phagocytes) occupy the same grid cell, they should **accumulate** their signals. The C++ version correctly does this, but the R fallback had a bug.
+
+**R fallback (buggy)**:
+```r
+coords = cbind(treg_y[active_tregs], treg_x[active_tregs])
+SAMPs[coords] = SAMPs[coords] + treg_activity_SAMPs_binary[active_tregs] * add_SAMPs * allow_tregs
+```
+
+When R assigns to duplicate matrix indices, **only the last assignment is kept**!
+
+**Example**: Two tregs at (2,2), each contributing 0.5:
+- R extracts: `SAMPs[c((2,2), (2,2))]` → `c(old_val, old_val)`
+- R computes: `c(old_val + 0.5, old_val + 0.5)`
+- R assigns: First `SAMPs[2,2] = old_val + 0.5`, then **overwrites** with `SAMPs[2,2] = old_val + 0.5`
+- Result: Only **one** treg's contribution is counted!
+
+**C++ version (correct)**:
+```cpp
+for (int i = 0; i < n_active; i++) {
+  int idx = active_tregs[i] - 1;
+  int x = treg_x[idx] - 1;
+  int y = treg_y[idx] - 1;
+  result(y, x) += ...;  // Correctly accumulates!
+}
+```
+
+### Impact:
+- When multiple tregs cluster at injury sites (common behavior), SAMPs production was dramatically underestimated in R version
+- When multiple M1 macrophages cluster (also common), ROS production was underestimated
+- This caused completely different simulation dynamics between C++ and R versions
+
+### Fix:
+Changed R fallbacks to use explicit loops instead of vectorized matrix indexing:
+```r
+# FIXED version:
+for (i in active_tregs) {
+  SAMPs[treg_y[i], treg_x[i]] = SAMPs[treg_y[i], treg_x[i]] +
+    treg_activity_SAMPs_binary[i] * add_SAMPs * allow_tregs
+}
+```
+
+## Summary
+The C++ implementation was correct all along. **Both bugs** were in the R fallback versions that get used when `cpp_on = F` or when C++ compilation fails. Bug #2 (duplicate location handling) was the **primary cause** of the discrepancy.

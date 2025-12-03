@@ -100,9 +100,11 @@ for (reps_in in 0:(num_reps-1)){
         )
       } else {
         # R fallback
-        coords = cbind(treg_y[active_tregs], treg_x[active_tregs])
-        SAMPs[coords] = SAMPs[coords] +
-          treg_activity_SAMPs_binary[active_tregs] * add_SAMPs * allow_tregs
+        # FIXED: Loop to handle multiple tregs at same location correctly
+        for (i in active_tregs) {
+          SAMPs[treg_y[i], treg_x[i]] = SAMPs[treg_y[i], treg_x[i]] +
+            treg_activity_SAMPs_binary[i] * add_SAMPs * allow_tregs
+        }
       }
     }
     
@@ -120,8 +122,11 @@ for (reps_in in 0:(num_reps-1)){
         )
       } else {
         # R fallback
-        coords = cbind(phagocyte_y[M1_phagocytes], phagocyte_x[M1_phagocytes])
-        ROS[coords] = ROS[coords] + phagocyte_activity_ROS[M1_phagocytes] * add_ROS
+        # FIXED: Loop to handle multiple phagocytes at same location correctly
+        for (i in M1_phagocytes) {
+          ROS[phagocyte_y[i], phagocyte_x[i]] = ROS[phagocyte_y[i], phagocyte_x[i]] +
+            phagocyte_activity_ROS[i] * add_ROS
+        }
       }
     }
     
