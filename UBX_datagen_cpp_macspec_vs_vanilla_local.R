@@ -174,7 +174,7 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION
     # ========================================================================
-    source("./MISC/RUN_REPS_CPP_MACSPEC_AND_VANILLA.R")
+    source("./MISC/RUN_REPS_CPP_MACSPEC_AND_VANILLA_ONELEVEL.R")
 
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
