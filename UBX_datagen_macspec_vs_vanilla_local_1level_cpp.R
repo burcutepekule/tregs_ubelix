@@ -21,7 +21,7 @@ cat("\n\n")
 # ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
-source("./MISC/FAST_FUNCTIONS.R")
+source("./MISC/FAST_FUNCTIONS_CPP_ONELEVEL.R")
 source("./MISC/PLOT_FUNCTIONS.R")
 source("./MISC/DATA_READ_FUNCTIONS.R")
 
@@ -81,7 +81,7 @@ cat("Loaded", nrow(params_df), "parameter sets\n\n")
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
 
-t_max      = 500
+t_max      = 5000
 num_reps   = 1 # reps per parameter set
 plot_on    = 0
 if(plot_on==1){
@@ -120,7 +120,6 @@ cat("  num_reps:", num_reps, "\n")
 cat("  grid_size:", grid_size, "x", grid_size, "\n")
 cat("  n_phagocytes:", n_phagocytes, "\n")
 cat("  n_tregs:", n_tregs, "\n\n")
-
 
 cat("After filtering already processed:", length(loop_over), "parameter sets remaining\n\n")
 
@@ -174,6 +173,7 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION
     # ========================================================================
+    
     source("./MISC/RUN_REPS_CPP_MACSPEC_AND_VANILLA_ONELEVEL.R")
 
     scenario_end_time = Sys.time()

@@ -142,7 +142,8 @@ List calculate_phagocyte_signals_cpp(
   int n = phagocyte_indices.size();
   NumericVector avg_DAMPs(n);
   NumericVector avg_SAMPs(n);
-  IntegerVector bacteria_counts(n);
+  // IntegerVector bacteria_counts(n);
+  int bacteria_counts = 0;
 
   for (int i = 0; i < n; i++)
   {
@@ -157,7 +158,7 @@ List calculate_phagocyte_signals_cpp(
     avg_SAMPs[i] = get_8n_avg_signal_cpp(x, y, act_radius_SAMPs, SAMPs, grid_size);
 
     // Count bacteria
-    int bacteria_count = 0;
+    // int bacteria_count = 0;
     // for (int j = 0; j < phagocyte_bacteria_registry.ncol(); j++) {
     //   bacteria_count += phagocyte_bacteria_registry(idx, j);
     // }

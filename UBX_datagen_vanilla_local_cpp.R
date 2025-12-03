@@ -2,7 +2,7 @@ rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(zoo)
-
+library(ggplot2)
 # ============================================================================
 # C++ ACCELERATED DATA GENERATION SCRIPT
 # ============================================================================
@@ -21,9 +21,24 @@ cat("\n\n")
 # ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
-source("/storage/homefs/bt25p365/tregs/MISC/FAST_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/PLOT_FUNCTIONS.R")
-source("/storage/homefs/bt25p365/tregs/MISC/DATA_READ_FUNCTIONS.R")
+
+cpp_on    = T
+one_level = F
+
+param_set_pick = 5
+t_max      = 1000
+num_reps   = 100 # reps per parameter set
+
+if(cpp_on & one_level){
+  source("./MISC/FAST_FUNCTIONS_CPP_ONELEVEL.R")
+}else if(cpp_on & !one_level){
+ source("./MISC/FAST_FUNCTIONS_CPP.R")
+}else{
+  source("./MISC/FAST_FUNCTIONS.R")
+}
+
+source("./MISC/PLOT_FUNCTIONS.R")
+source("./MISC/DATA_READ_FUNCTIONS.R")
 
 cat("\n")
 
@@ -31,32 +46,10 @@ cat("\n")
 # check_cpp_status()  # Uncomment to see which functions are accelerated
 
 # ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-split_equal = function(x, n_chunks) {
-  split(x, cut(seq_along(x), breaks = n_chunks, labels = FALSE))
-}
-
-# ============================================================================
-# COMMAND LINE ARGUMENTS
-# ============================================================================
-
-args   = commandArgs(trailingOnly = TRUE)
-n1     = as.integer(args[1])
-n2     = as.integer(args[2])
-
-chunks    = split_equal(0:99999, n1)
-loop_over = chunks[[n2]]
-
-cat("Processing chunk", n2, "of", n1, "\n")
-cat("Parameter sets:", min(loop_over), "-", max(loop_over), "\n\n")
-
-# ============================================================================
 # SETUP OUTPUT DIRECTORY
 # ============================================================================
 
-dir_name_data = '/storage/homefs/bt25p365/tregs/mass_sim_results_R_cpp_macspec_vs_vanilla'
+dir_name_data = './mass_sim_results_R_cpp_macspec_vs_vanilla'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 cat("Output directory:", dir_name_data, "\n\n")
@@ -71,16 +64,18 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
 # ============================================================================
 
 cat("Reading parameters...\n")
-params_df = read.csv("/storage/homefs/bt25p365/tregs/lhs_parameters_ubelix_macspec.csv", stringsAsFactors = FALSE)
-params_df = params_df %>% dplyr::filter(param_set_id %in% loop_over)
+# params_df = read.csv("./lhs_parameters_ubelix_macspec.csv", stringsAsFactors = FALSE)
+# params_df = read.csv("./tregs_better_parameters_ubelix.csv", stringsAsFactors = FALSE)
+# params_df = params_df %>% dplyr::filter(param_set_id==1)
+
+params_df = read.csv("./lhs_parameters_ubelix_merged.csv", stringsAsFactors = FALSE)
+params_df = params_df %>% dplyr::filter(param_set_id==param_set_pick)
 cat("Loaded", nrow(params_df), "parameter sets\n\n")
 
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
 
-t_max      = 5000
-num_reps   = 100 # reps per parameter set
 plot_on    = 0
 if(plot_on==1){
   dir_name_frames = './frames'
@@ -118,48 +113,32 @@ cat("  num_reps:", num_reps, "\n")
 cat("  grid_size:", grid_size, "x", grid_size, "\n")
 cat("  n_phagocytes:", n_phagocytes, "\n")
 cat("  n_tregs:", n_tregs, "\n\n")
-
-
-cat("After filtering already processed:", length(loop_over), "parameter sets remaining\n\n")
-
 # ============================================================================
 # SCENARIO DEFINITIONS
 # ============================================================================
 
 scenarios_df = expand.grid(
-  sterile         = c(0, 1),
+  sterile         = c(1),
   allow_tregs     = c(0, 1),
-  randomize_tregs = c(0, 1),
-  macspec_on      = c(0, 1)
+  randomize_tregs = c(0)
 )
 # DOESN'T MAKE SENSE TO RUN THIS
 scenarios_df = scenarios_df %>% dplyr::filter(!(allow_tregs == 0 & randomize_tregs==1))
-scenarios_df = scenarios_df %>% dplyr::filter(!(macspec_on ==1 & allow_tregs == 1 & randomize_tregs==1))
-scenarios_df = scenarios_df %>% dplyr::filter(!(macspec_on ==1 & allow_tregs == 1 & randomize_tregs==0))
-
-cat("Running", nrow(scenarios_df), "scenarios per parameter set\n")
-cat("Total simulations:", length(loop_over) * nrow(scenarios_df) * num_reps, "\n\n")
-
-cat("=" = rep("=", 70), sep = "")
-cat("\n")
-cat("Starting simulations with C++ acceleration...\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n\n")
 
 # ============================================================================
 # MAIN SIMULATION LOOP
 # ============================================================================
-
-for(param_set_id_use in loop_over){
-  param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
+scenario_elapsed_sum = 0
+longitudinal_df_keep_all = c()
+for(param_set_id_use in 1){
+  param_set_use = params_df[param_set_id_use, ]
 
   for (scenario_ind in 1:nrow(scenarios_df)){
     sterile         = scenarios_df[scenario_ind,]$sterile
     allow_tregs     = scenarios_df[scenario_ind,]$allow_tregs
     randomize_tregs = scenarios_df[scenario_ind,]$randomize_tregs
-    macspec_on      = scenarios_df[scenario_ind,]$macspec_on
-    
-    source("/storage/homefs/bt25p365/tregs/MISC/ASSIGN_PARAMETERS_MACSPEC.R")
+
+    source("./MISC/ASSIGN_PARAMETERS.R")
     
     cat(paste0('[', Sys.time(), '] Processing param set ', param_set_id_use,
                ' - scenario ', scenario_ind, '/', nrow(scenarios_df)))
@@ -172,30 +151,42 @@ for(param_set_id_use in loop_over){
     # ========================================================================
     # RUN SIMULATION WITH C++ ACCELERATION
     # ========================================================================
-    source("/storage/homefs/bt25p365/tregs/MISC/RUN_REPS_CPP_MACSPEC_AND_VANILLA.R")
-
+    
+    if(cpp_on & one_level){
+      source("./MISC/RUN_REPS_CPP_ONELEVEL.R")
+    }else{
+      source("./MISC/RUN_REPS_CPP.R")
+    }
+    
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
 
     colnames(longitudinal_df_keep)[c(9:39)] = colnames_insert 
-    saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
-                                         '_sterile_',sterile,
-                                         '_tregs_',allow_tregs,
-                                         '_trnd_',randomize_tregs,'.rds'))
+    # saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
+    #                                      '_sterile_',sterile,
+    #                                      '_tregs_',allow_tregs,
+    #                                      '_trnd_',randomize_tregs,'.rds'))
 
+    longitudinal_df_keep_all = rbind(longitudinal_df_keep_all, longitudinal_df_keep)
     cat(sprintf(' - %.1f seconds ✓\n', scenario_elapsed))
+    scenario_elapsed_sum = scenario_elapsed_sum + scenario_elapsed
   }
 }
 
-# ============================================================================
-# SUMMARY
-# ============================================================================
-cat("\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n")
-cat("SIMULATION COMPLETE\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n")
-cat("Data saved to:", dir_name_data, "\n")
-cat("\n")
+variables = c("epithelial_score")
+
+results   = longitudinal_df_keep_all
+data_long = results %>%
+  dplyr::select(t, sterile, tregs_on, randomize_tregs, rep_id, all_of(variables)) %>%
+  pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
+
+p = ggplot(data_long, aes(x = t, y = value, color = variable, group = rep_id)) +
+  geom_line(alpha = 0.5, linewidth = 1) +
+  facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
+  scale_color_manual(values = agent_colors) +
+  theme_minimal() +
+  labs(title = "Epithelial Cell Dynamics", x = "Time", y = "Count", color = "Agent")
+print(p)
+
+cat(sprintf('Total: %.1f seconds ✓\n', scenario_elapsed_sum))
 
