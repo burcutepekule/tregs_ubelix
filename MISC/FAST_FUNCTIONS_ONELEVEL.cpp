@@ -422,28 +422,3 @@ NumericMatrix update_SAMPs_batch_cpp(
 
   return result;
 }
-
-// Update ROS matrix with multiple M1 phagocytes at once
-// [[Rcpp::export]]
-NumericMatrix update_ROS_batch_cpp(
-    NumericMatrix ROS,
-    IntegerVector M1_phagocytes,
-    IntegerVector phagocyte_x,
-    IntegerVector phagocyte_y,
-    NumericVector phagocyte_activity_ROS,
-    double add_ROS)
-{
-  NumericMatrix result = clone(ROS);
-  int n_M1 = M1_phagocytes.size();
-
-  for (int i = 0; i < n_M1; i++)
-  {
-    int idx = M1_phagocytes[i] - 1; // R to C++ indexing
-    int x = phagocyte_x[idx] - 1;
-    int y = phagocyte_y[idx] - 1;
-
-    result(y, x) += phagocyte_activity_ROS[idx] * add_ROS;
-  }
-
-  return result;
-}

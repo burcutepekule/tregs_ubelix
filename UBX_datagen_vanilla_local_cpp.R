@@ -4,40 +4,15 @@ library(tidyr)
 library(zoo)
 library(ggplot2)
 set.seed(42)
-# ============================================================================
-# C++ ACCELERATED DATA GENERATION SCRIPT
-# ============================================================================
-# This script uses C++ implementations for 20-100x speedup
-# To use: Rscript UBX_datagen_cpp.R <n1> <n2>
-# ============================================================================
-
-cat("\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n🚀 C++ ACCELERATED TREGS SIMULATION\n")
-cat("=" = rep("=", 70), sep = "")
-cat("\n\n")
-
-# ============================================================================
-# LOAD C++ ACCELERATED FUNCTIONS
-# ============================================================================
 
 cat("Loading C++ accelerated functions...\n")
 
 cpp_on    = T
-one_level = F
+one_level = T # not exactly the same result 
 
-on_1 = 1 #update_SAMPs_batch_cpp
-on_2 = 0 #update_ROS_batch_cpp -> totally different
-on_3 = 1 #diffuse_matrix_cpp -> slightly different
-on_4 = 1 #calculate_phagocyte_signals_cpp
-on_5 = 1 #shift_insert_fast_cpp
-on_6 = 1 #find_nearby_tregs_cpp
-on_7 = 1 #kill_microbes_with_ros_cpp
-on_8 = 1 #calculate_epithelial_ros_cpp
-
-param_set_pick = 5
-t_max      = 500
-num_reps   = 20 # reps per parameter set
+param_set_pick = 79902 #19605 VS 79902 - both work
+t_max          = 5000
+num_reps       = 1 # reps per parameter set
 
 if(cpp_on & one_level){
   source("./MISC/FAST_FUNCTIONS_CPP_ONELEVEL.R")
@@ -68,7 +43,9 @@ colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','
                     'phagocyte_M0','phagocyte_M1_L_0','phagocyte_M1_L_1','phagocyte_M1_L_2','phagocyte_M1_L_3','phagocyte_M1_L_4','phagocyte_M1_L_5',
                     'phagocyte_M2_L_0','phagocyte_M2_L_1','phagocyte_M2_L_2','phagocyte_M2_L_3','phagocyte_M2_L_4','phagocyte_M2_L_5',
                     'commensal','pathogen','treg_resting','treg_active','C_ROS','C_M0','C_M1','C_M2','P_ROS','P_M0','P_M1','P_M2')
-
+colnames_insert_1level = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','epithelial_inj_3','epithelial_inj_4','epithelial_inj_5',
+                    'phagocyte_M0','phagocyte_M1','phagocyte_M2',
+                    'commensal','pathogen','treg_resting','treg_active','C_ROS','C_M0','C_M1','C_M2','P_ROS','P_M0','P_M1','P_M2')
 # ============================================================================
 # READ PARAMETERS FROM CSV
 # ============================================================================
@@ -81,6 +58,11 @@ cat("Reading parameters...\n")
 params_df = read.csv("./lhs_parameters_ubelix_merged.csv", stringsAsFactors = FALSE)
 params_df = params_df %>% dplyr::filter(param_set_id==param_set_pick)
 cat("Loaded", nrow(params_df), "parameter sets\n\n")
+
+# if(one_level){ # because it doesn't gradually increase
+#   params_df$activity_engulf_M1_baseline = 0.9
+#   params_df$activity_engulf_M2_baseline = 0.9
+# }
 
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
@@ -129,7 +111,7 @@ cat("  n_tregs:", n_tregs, "\n\n")
 
 scenarios_df = expand.grid(
   sterile         = c(1),
-  allow_tregs     = c(0),
+  allow_tregs     = c(0, 1),
   randomize_tregs = c(0)
 )
 # DOESN'T MAKE SENSE TO RUN THIS
@@ -164,14 +146,19 @@ for(param_set_id_use in 1){
     
     if(cpp_on & one_level){
       source("./MISC/RUN_REPS_CPP_ONELEVEL.R")
-    }else{
+      # colnames(longitudinal_df_keep)[c(9:39)] = colnames_insert_1level 
+    }else if(cpp_on & !one_level){
       source("./MISC/RUN_REPS_CPP.R")
+      # colnames(longitudinal_df_keep)[c(9:39)] = colnames_insert 
+    }else{
+      source("./MISC/RUN_REPS.R")
+      # colnames(longitudinal_df_keep)[c(9:39)] = colnames_insert 
     }
     
     scenario_end_time = Sys.time()
     scenario_elapsed = as.numeric(difftime(scenario_end_time, scenario_start_time, units = "secs"))
 
-    colnames(longitudinal_df_keep)[c(9:39)] = colnames_insert 
+
     # saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
     #                                      '_sterile_',sterile,
     #                                      '_tregs_',allow_tregs,
@@ -191,7 +178,7 @@ data_long = results %>%
   pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
 
 p = ggplot(data_long, aes(x = t, y = value, color = variable, group = rep_id)) +
-  geom_line(alpha = 0.5, linewidth = 1) +
+  geom_line(alpha = 0.25, linewidth = 1) +
   facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
   scale_color_manual(values = agent_colors) +
   theme_minimal() +

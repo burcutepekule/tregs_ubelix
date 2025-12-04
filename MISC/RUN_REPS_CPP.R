@@ -92,42 +92,20 @@ for (reps_in in 0:(num_reps-1)){
     # ========================================================================
     active_tregs = which(treg_phenotype == 1)
     if (length(active_tregs) > 0) {
-      if (exists("update_SAMPs_batch_cpp", mode = "function") & on_1==1) {
-        # C++ version (20-50x faster)
-        SAMPs = update_SAMPs_batch_cpp(
-          SAMPs, active_tregs, treg_x, treg_y,
-          treg_activity_SAMPs_binary, add_SAMPs, allow_tregs
-        )
-      } else {
-        # R fallback
-        # coords = cbind(treg_y[active_tregs], treg_x[active_tregs])
-        # SAMPs[coords] = SAMPs[coords] +
-        #   treg_activity_SAMPs_binary[active_tregs] * add_SAMPs * allow_tregs
-        for (i in active_tregs) {
-          SAMPs[treg_y[i], treg_x[i]] = SAMPs[treg_y[i], treg_x[i]] +
-            treg_activity_SAMPs_binary[i] * add_SAMPs * allow_tregs
-          
-        }
-      }
+      # C++ version (20-50x faster)
+      SAMPs = update_SAMPs_batch_cpp(
+        SAMPs, active_tregs, treg_x, treg_y,
+        treg_activity_SAMPs_binary, add_SAMPs, allow_tregs
+      )
     }
     
     # ========================================================================
     # UPDATE ROS (from M1 phagocytes)
-    # C++ ACCELERATION: Batch update of ROS matrix
     # ========================================================================
     M1_phagocytes = which(phagocyte_phenotype == 1)
     if (length(M1_phagocytes) > 0) {
-      if (exists("update_ROS_batch_cpp", mode = "function") & on_2==1) {
-        # C++ version (20-50x faster)
-        ROS = update_ROS_batch_cpp(
-          ROS, M1_phagocytes, phagocyte_x, phagocyte_y,
-          phagocyte_activity_ROS, add_ROS
-        )
-      } else {
-        # R fallback
-        coords = cbind(phagocyte_y[M1_phagocytes], phagocyte_x[M1_phagocytes])
-        ROS[coords] = ROS[coords] + phagocyte_activity_ROS[M1_phagocytes] * add_ROS
-      }
+      coords = cbind(phagocyte_y[M1_phagocytes], phagocyte_x[M1_phagocytes])
+      ROS[coords] = ROS[coords] + phagocyte_activity_ROS[M1_phagocytes] * add_ROS
     }
     
     # ========================================================================
@@ -204,17 +182,10 @@ for (reps_in in 0:(num_reps-1)){
     # DIFFUSE & DECAY SIGNALS
     # C++ ACCELERATION: Matrix diffusion operations
     # ========================================================================
-    if (exists("diffuse_matrix_cpp", mode = "function") & on_3==1) {
-      # C++ version (5-10x faster)
-      DAMPs = diffuse_matrix_cpp(DAMPs, diffusion_speed_DAMPs, max_cell_value_DAMPs)
-      SAMPs = diffuse_matrix_cpp(SAMPs, diffusion_speed_SAMPs, max_cell_value_SAMPs)
-      ROS = diffuse_matrix_cpp(ROS, diffusion_speed_ROS, max_cell_value_ROS)
-    } else {
-      # R fallback
-      DAMPs = diffuse_matrix(DAMPs, diffusion_speed_DAMPs, max_cell_value_DAMPs)
-      SAMPs = diffuse_matrix(SAMPs, diffusion_speed_SAMPs, max_cell_value_SAMPs)
-      ROS = diffuse_matrix(ROS, diffusion_speed_ROS, max_cell_value_ROS)
-    }
+    # C++ version (5-10x faster)
+    DAMPs = diffuse_matrix_cpp(DAMPs, diffusion_speed_DAMPs, max_cell_value_DAMPs)
+    SAMPs = diffuse_matrix_cpp(SAMPs, diffusion_speed_SAMPs, max_cell_value_SAMPs)
+    ROS = diffuse_matrix_cpp(ROS, diffusion_speed_ROS, max_cell_value_ROS)
     
     DAMPs = DAMPs - DAMPs_decay * DAMPs
     SAMPs = SAMPs - SAMPs_decay * SAMPs
@@ -362,26 +333,13 @@ for (reps_in in 0:(num_reps-1)){
     # Process M0 phagocytes (candidates for activation)
     if (length(M0_indices) > 0) {
       # C++ ACCELERATION: Calculate all signals at once
-      if (exists("calculate_phagocyte_signals_cpp", mode = "function") & on_4==1) {
-        signals = calculate_phagocyte_signals_cpp(
-          M0_indices, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
-          act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
-        )
-        avg_DAMPs_vec = signals$avg_DAMPs
-        avg_SAMPs_vec = signals$avg_SAMPs
-        bacteria_count_vec = signals$bacteria_counts
-      } else {
-        # R fallback
-        avg_DAMPs_vec = get_8n_avg_signal_vectorized(
-          phagocyte_x[M0_indices], phagocyte_y[M0_indices],
-          act_radius_DAMPs, DAMPs, grid_size
-        )
-        avg_SAMPs_vec = get_8n_avg_signal_vectorized(
-          phagocyte_x[M0_indices], phagocyte_y[M0_indices],
-          act_radius_SAMPs, SAMPs, grid_size
-        )
-        bacteria_count_vec = rowSums(phagocyte_bacteria_registry[M0_indices, , drop = FALSE])
-      }
+      signals = calculate_phagocyte_signals_cpp(
+        M0_indices, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
+        act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
+      )
+      avg_DAMPs_vec = signals$avg_DAMPs
+      avg_SAMPs_vec = signals$avg_SAMPs
+      bacteria_count_vec = signals$bacteria_counts
       
       for (idx in seq_along(M0_indices)) {
         i = M0_indices[idx]
@@ -412,26 +370,13 @@ for (reps_in in 0:(num_reps-1)){
       
       if (length(candidates) > 0) {
         # C++ ACCELERATION: Calculate all signals at once
-        if (exists("calculate_phagocyte_signals_cpp", mode = "function") & on_4==1) {
-          signals = calculate_phagocyte_signals_cpp(
-            candidates, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
-            act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
-          )
-          avg_DAMPs_vec = signals$avg_DAMPs
-          avg_SAMPs_vec = signals$avg_SAMPs
-          bacteria_count_vec = signals$bacteria_counts
-        } else {
-          # R fallback
-          avg_DAMPs_vec = get_8n_avg_signal_vectorized(
-            phagocyte_x[candidates], phagocyte_y[candidates],
-            act_radius_DAMPs, DAMPs, grid_size
-          )
-          avg_SAMPs_vec = get_8n_avg_signal_vectorized(
-            phagocyte_x[candidates], phagocyte_y[candidates],
-            act_radius_SAMPs, SAMPs, grid_size
-          )
-          bacteria_count_vec = rowSums(phagocyte_bacteria_registry[candidates, , drop = FALSE])
-        }
+        signals = calculate_phagocyte_signals_cpp(
+          candidates, phagocyte_x, phagocyte_y, phagocyte_bacteria_registry,
+          act_radius_DAMPs, act_radius_SAMPs, DAMPs, SAMPs, grid_size
+        )
+        avg_DAMPs_vec = signals$avg_DAMPs
+        avg_SAMPs_vec = signals$avg_SAMPs
+        bacteria_count_vec = signals$bacteria_counts
         
         for (idx in seq_along(candidates)) {
           i = candidates[idx]
@@ -501,17 +446,10 @@ for (reps_in in 0:(num_reps-1)){
             pathogen_coords = pathogen_coords[-indices_to_engulf, , drop = FALSE]
             
             # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function") & on_5==1) {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            } else {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            }
+            phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
+              phagocyte_bacteria_registry[i, ],
+              rep(1, length(indices_to_engulf))
+            )
             
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             pathogens_killed_by_Mac[phagocyte_phenotype_index] =
@@ -534,17 +472,10 @@ for (reps_in in 0:(num_reps-1)){
             commensal_coords = commensal_coords[-indices_to_engulf, , drop = FALSE]
             
             # C++ ACCELERATION: shift_insert
-            if (exists("shift_insert_fast_cpp", mode = "function") & on_5==1) {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            } else {
-              phagocyte_bacteria_registry[i, ] = shift_insert_fast(
-                phagocyte_bacteria_registry[i, ],
-                rep(1, length(indices_to_engulf))
-              )
-            }
+            phagocyte_bacteria_registry[i, ] = shift_insert_fast_cpp(
+              phagocyte_bacteria_registry[i, ],
+              rep(1, length(indices_to_engulf))
+            )
             
             phagocyte_phenotype_index = phagocyte_phenotype[i] + 1
             commensals_killed_by_Mac[phagocyte_phenotype_index] =
@@ -569,17 +500,9 @@ for (reps_in in 0:(num_reps-1)){
         py = phagocyte_y[i]
         
         # C++ ACCELERATION: find nearby tregs
-        if (exists("find_nearby_tregs_cpp", mode = "function") & on_6==1) {
-          nearby_treg_indices = find_nearby_tregs_cpp(
-            px, py, treg_x, treg_y, treg_vicinity_effect
-          )
-        } else {
-          # R fallback
-          treg_distances_x = abs(treg_x - px)
-          treg_distances_y = abs(treg_y - py)
-          nearby_treg_indices = which(treg_distances_x <= treg_vicinity_effect &
-                                        treg_distances_y <= treg_vicinity_effect)
-        }
+        nearby_treg_indices = find_nearby_tregs_cpp(
+          px, py, treg_x, treg_y, treg_vicinity_effect
+        )
         
         if (length(nearby_treg_indices) > 0) {
           num_pat_antigens = phagocyte_pathogens_engulfed[i]
@@ -612,47 +535,21 @@ for (reps_in in 0:(num_reps-1)){
     # C++ ACCELERATION: Batch killing with single function call (HUGE SPEEDUP)
     # ========================================================================
     if (nrow(pathogen_coords) > 0) {
-      if (exists("kill_microbes_with_ros_cpp", mode = "function") & on_7==1) {
-        # C++ version (50-100x faster!)
-        result = kill_microbes_with_ros_cpp(
-          pathogen_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
-        )
-        pathogen_coords = result$surviving_microbes
-        pathogens_killed_by_ROS = pathogens_killed_by_ROS + result$n_killed
-      } else {
-        # R fallback
-        pathogen_avg_ROS = get_8n_avg_signal_vectorized(
-          pathogen_coords[, "x"], pathogen_coords[, "y"],
-          act_radius_ROS, ROS, grid_size
-        )
-        pathogens_to_kill = which(pathogen_avg_ROS > th_ROS_microbe)
-        if (length(pathogens_to_kill) > 0) {
-          pathogen_coords = pathogen_coords[-pathogens_to_kill, , drop = FALSE]
-          pathogens_killed_by_ROS = pathogens_killed_by_ROS + length(pathogens_to_kill)
-        }
-      }
+      # C++ version (50-100x faster!)
+      result = kill_microbes_with_ros_cpp(
+        pathogen_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
+      )
+      pathogen_coords = result$surviving_microbes
+      pathogens_killed_by_ROS = pathogens_killed_by_ROS + result$n_killed
     }
     
     if (nrow(commensal_coords) > 0) {
-      if (exists("kill_microbes_with_ros_cpp", mode = "function") & on_7==1) {
-        # C++ version (50-100x faster!)
-        result = kill_microbes_with_ros_cpp(
-          commensal_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
-        )
-        commensal_coords = result$surviving_microbes
-        commensals_killed_by_ROS = commensals_killed_by_ROS + result$n_killed
-      } else {
-        # R fallback
-        commensal_avg_ROS = get_8n_avg_signal_vectorized(
-          commensal_coords[, "x"], commensal_coords[, "y"],
-          act_radius_ROS, ROS, grid_size
-        )
-        commensals_to_kill = which(commensal_avg_ROS > th_ROS_microbe)
-        if (length(commensals_to_kill) > 0) {
-          commensal_coords = commensal_coords[-commensals_to_kill, , drop = FALSE]
-          commensals_killed_by_ROS = commensals_killed_by_ROS + length(commensals_to_kill)
-        }
-      }
+      # C++ version (50-100x faster!)
+      result = kill_microbes_with_ros_cpp(
+        commensal_coords, ROS, act_radius_ROS, th_ROS_microbe, grid_size
+      )
+      commensal_coords = result$surviving_microbes
+      commensals_killed_by_ROS = commensals_killed_by_ROS + result$n_killed
     }
     
     # ========================================================================
@@ -662,21 +559,9 @@ for (reps_in in 0:(num_reps-1)){
     epithelium_x = epithelium$x
     
     # C++ ACCELERATION: Calculate ROS for all epithelial cells at once
-    if (exists("calculate_epithelial_ros_cpp", mode = "function") & on_8==1) {
-      ros_means = calculate_epithelial_ros_cpp(
-        epithelium_x, act_radius_ROS, ROS, grid_size
-      )
-    } else {
-      # R fallback
-      ros_means = numeric(length(epithelium_x))
-      for (i in seq_along(epithelium_x)) {
-        px = epithelium_x[i]
-        x_start = max(1, px - act_radius_ROS)
-        x_end = min(grid_size, px + act_radius_ROS)
-        x_coordinates = x_start:x_end
-        ros_means[i] = mean(ROS[1, x_coordinates])
-      }
-    }
+    ros_means = calculate_epithelial_ros_cpp(
+      epithelium_x, act_radius_ROS, ROS, grid_size
+    )
     
     # Vectorized injury updates
     epithelium$level_injury = epithelium$level_injury +

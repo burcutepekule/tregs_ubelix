@@ -13,7 +13,14 @@ diffusion_speed_SAMPs = param_set_use$diffusion_speed_SAMPs
 diffusion_speed_ROS = param_set_use$diffusion_speed_ROS
 
 # Signal production
-add_ROS = param_set_use$add_ROS
+if(control==1){
+  add_ROS = 0 # to see whether infection resolves without ROS 
+  activity_ROS_M1_baseline = 0
+}else{
+  add_ROS = param_set_use$add_ROS
+  activity_ROS_M1_baseline = param_set_use$activity_ROS_M1_baseline
+}
+
 add_DAMPs = param_set_use$add_DAMPs
 add_SAMPs = param_set_use$add_SAMPs
 
@@ -30,14 +37,11 @@ activation_threshold_SAMPs = param_set_use$activation_threshold_SAMPs
 activity_engulf_M0_baseline = param_set_use$activity_engulf_M0_baseline
 activity_engulf_M1_baseline = param_set_use$activity_engulf_M1_baseline
 activity_engulf_M2_baseline = param_set_use$activity_engulf_M2_baseline
-activity_engulf_M1_max = 0.99
-activity_engulf_M2_max = 0.75 # make it lower
 
 # ROS production activities
 activity_ROS_M0_baseline = 0.00
-activity_ROS_M1_baseline = param_set_use$activity_ROS_M1_baseline
 activity_ROS_M2_baseline = 0.00
-activity_ROS_max = 0.99
+# activity_ROS_max = 0.99
 
 # Leak rates
 rate_leak_commensal_injury = param_set_use$rate_leak_commensal_injury
@@ -69,6 +73,6 @@ precision_treg = 10 * (exp(5 * treg_discrimination_efficiency))
 precision_mac = 10 * (exp(5 * mac_discrimination_efficiency))
 
 # Calculate step sizes for activity increases
-activity_engulf_M1_step = (activity_engulf_M1_max - activity_engulf_M1_baseline) / cc_phagocyte
-activity_engulf_M2_step = (activity_engulf_M2_max - activity_engulf_M2_baseline) / cc_phagocyte
-activity_ROS_M1_step = (activity_ROS_max - activity_ROS_M1_baseline) / cc_phagocyte
+# activity_engulf_M1_step = (activity_engulf_M1_max - activity_engulf_M1_baseline) / cc_phagocyte
+# activity_engulf_M2_step = (activity_engulf_M2_max - activity_engulf_M2_baseline) / cc_phagocyte
+# activity_ROS_M1_step = (activity_ROS_max - activity_ROS_M1_baseline) / cc_phagocyte

@@ -8,8 +8,8 @@ library(readr)
 param_bounds = list(
   rate_leak_pathogen_injury = c(1, 1), #FIXED 
   rate_leak_commensal_injury = c(0.5, 0.5), #FIXED
-  rate_leak_commensal_baseline = c(0.25, 0.25), #FIXED
-  epith_recovery_chance = c(0.25, 0.25), #FIXED
+  rate_leak_commensal_baseline = c(0.05, 0.05), #FIXED
+  epith_recovery_chance = c(0.05, 0.05), #FIXED
   activity_engulf_M0_baseline = c(0.25, 0.25),#FIXED
   mac_discrimination_efficiency = c(1, 1), #FIXED, TO COMPARE WITH THE PERFECT MACROPHAGE
   th_ROS_microbe = c(0, 1), 
@@ -26,8 +26,8 @@ param_bounds = list(
   SAMPs_decay = c(0, 0.5),
   activation_threshold_DAMPs = c(0, 0.5),
   activation_threshold_SAMPs = c(0, 0.5),
-  activity_engulf_M1_baseline = c(0, 0.5),
-  activity_engulf_M2_baseline = c(0, 0.5),
+  activity_engulf_M1_baseline = c(0, 0.75),
+  activity_engulf_M2_baseline = c(0, 0.75),
   activity_ROS_M1_baseline = c(0, 0.5),
   active_age_limit = c(3, 30),  # discrete parameter, will be rounded
   treg_discrimination_efficiency = c(0, 1)
@@ -60,9 +60,7 @@ lhs_samples$active_age_limit = round(lhs_samples$active_age_limit)
 
 # Apply the rules
 # th_ROS_microbe should be lower than th_ROS_epith_recover
-# activity_engulf_M2_baseline should be lower than activity_engulf_M1_baseline
 lhs_samples = lhs_samples %>% dplyr::filter(th_ROS_microbe<th_ROS_epith_recover)
-lhs_samples = lhs_samples %>% dplyr::filter(activity_engulf_M2_baseline<activity_engulf_M1_baseline)
 
 lhs_samples$mac_rat_com_pat_threshold = lhs_samples$rat_com_pat_threshold # TO HAVE A FAIR COMPARISON
 param_names = c(param_names, 'mac_rat_com_pat_threshold')
