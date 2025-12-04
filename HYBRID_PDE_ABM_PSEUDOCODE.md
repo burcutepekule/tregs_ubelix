@@ -3,11 +3,11 @@
 ## Architecture
 
 ### PDE Components (continuous fields on 25×25 grid)
-- `P[i,j]` - pathogen concentration
-- `C[i,j]` - commensal concentration
-- `D[i,j]` - DAMP concentration
-- `S[i,j]` - SAMP concentration
-- `R[i,j]` - ROS concentration
+- `P_field[i,j]` - pathogen concentration
+- `C_field[i,j]` - commensal concentration
+- `DAMPs[i,j]` - DAMP concentration
+- `SAMPs[i,j]` - SAMP concentration
+- `ROS[i,j]` - ROS concentration
 
 ### ABM Components (discrete agents)
 

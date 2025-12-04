@@ -36,11 +36,11 @@ for (reps_in in 0:(num_reps-1)){
   phagocyte_x = sample(1:grid_size, n_phagocytes, TRUE)
   phagocyte_y = sample(2:grid_size, n_phagocytes, TRUE)
   phagocyte_phenotype = rep(0, n_phagocytes)  # 0=M0, 1=M1, 2=M2
-  phagocyte_activity_ROS = rep(activity_ROS_M0_baseline, n_phagocytes)
-  phagocyte_activity_engulf = rep(activity_engulf_M0_baseline, n_phagocytes)
+  phagocyte_activity_ROS = rep(activity_ROS_M0, n_phagocytes) # All start from M0 phenotype
+  phagocyte_activity_engulf = rep(activity_engulf_M0, n_phagocytes) # All start from M0 phenotype
   phagocyte_active_age = rep(0, n_phagocytes)
 
-  # NEW: Decaying memory instead of cumulative
+  # Decaying memory 
   phagocyte_pathogen_memory = rep(0, n_phagocytes)
   phagocyte_commensal_memory = rep(0, n_phagocytes)
   memory_decay_rate = exp(-log(2) / memory_half_life)
@@ -127,11 +127,11 @@ for (reps_in in 0:(num_reps-1)){
       inj = epithelium$level_injury[k]
 
       # Pathogen leakage
-      n_new_pathogens = rpois(1, rate_leak_pathogen_injury * inj)
+      n_new_pathogens = rate_leak_pathogen_injury*inj
       P_field[1, x] = P_field[1, x] + n_new_pathogens
 
       # Commensal leakage
-      n_new_commensals = rpois(1, rate_leak_commensal_baseline + rate_leak_commensal_injury * inj)
+      n_new_commensals = rate_leak_commensal_baseline + rate_leak_commensal_injury * inj
       C_field[1, x] = C_field[1, x] + n_new_commensals
     }
 
@@ -291,13 +291,13 @@ for (reps_in in 0:(num_reps-1)){
         if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
           phagocyte_phenotype[i] = 1
           phagocyte_active_age[i] = 1
-          phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
-          phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
+          phagocyte_activity_ROS[i] = activity_ROS_M1
+          phagocyte_activity_engulf[i] = activity_engulf_M1
         } else if (avg_SAMPs >= activation_threshold_SAMPs && avg_SAMPs > avg_DAMPs) {
           phagocyte_phenotype[i] = 2
           phagocyte_active_age[i] = 1
-          phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-          phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
+          phagocyte_activity_ROS[i] = activity_ROS_M2
+          phagocyte_activity_engulf[i] = activity_engulf_M2
         }
       }
     }
@@ -349,36 +349,36 @@ for (reps_in in 0:(num_reps-1)){
             if (DAMPs_dominant || pathogen_memory_dominant) {
               phagocyte_phenotype[i] = 1
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M1
+              phagocyte_activity_engulf[i] = activity_engulf_M1
             } else if (SAMPs_dominant && commensal_memory_dominant) {
               phagocyte_phenotype[i] = 2
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M2
+              phagocyte_activity_engulf[i] = activity_engulf_M2
             } else if (avg_SAMPs < activation_threshold_SAMPs && avg_DAMPs < activation_threshold_DAMPs) {
               phagocyte_phenotype[i] = 0
               phagocyte_active_age[i] = 0
-              phagocyte_activity_ROS[i] = activity_ROS_M0_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M0_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M0
+              phagocyte_activity_engulf[i] = activity_engulf_M0
             }
           }else{
             # Vanilla mode: only environmental signals
             if (avg_DAMPs >= activation_threshold_DAMPs && avg_DAMPs > avg_SAMPs) {
               phagocyte_phenotype[i] = 1
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M1_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M1_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M1
+              phagocyte_activity_engulf[i] = activity_engulf_M1
             } else if (avg_SAMPs >= activation_threshold_SAMPs && avg_SAMPs > avg_DAMPs) {
               phagocyte_phenotype[i] = 2
               phagocyte_active_age[i] = 1
-              phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M2
+              phagocyte_activity_engulf[i] = activity_engulf_M2
             } else if (avg_SAMPs < activation_threshold_SAMPs && avg_DAMPs < activation_threshold_DAMPs) {
               phagocyte_phenotype[i] = 0
               phagocyte_active_age[i] = 0
-              phagocyte_activity_ROS[i] = activity_ROS_M0_baseline
-              phagocyte_activity_engulf[i] = activity_engulf_M0_baseline
+              phagocyte_activity_ROS[i] = activity_ROS_M0
+              phagocyte_activity_engulf[i] = activity_engulf_M0
             }
           }
         }
